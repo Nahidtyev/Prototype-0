@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { storageRule } from "./rules/storage.js";
 import { collectSourceFiles } from "./scanner/fileWalker.js";
 import { parseSource } from "./scanner/parser.js";
 import { printFindings } from "./scanner/report.js";
@@ -27,7 +28,7 @@ async function main() {
 
       const findings = runRules(
         { filePath, code, ast },
-        [domXssRule],
+        [domXssRule, storageRule],
       );
 
       allFindings.push(...findings);
