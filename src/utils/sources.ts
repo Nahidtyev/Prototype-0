@@ -1,19 +1,12 @@
-export const SOURCE_IDENTIFIERS = [
-  "location",
-  "document.URL",
-  "document.documentURI",
-  "document.location",
-  "window.location",
-  "location.href",
-  "location.hash",
+export const TAINT_SOURCES = new Set([
   "location.search",
+  "location.hash",
+  "location.href",
+  "window.location.search",
+  "window.location.hash",
+  "window.location.href",
+  "document.URL",
   "document.cookie",
+  "document.referrer",
   "window.name",
-  "postMessage",
-  "localStorage",
-  "sessionStorage",
-] as const;
-
-export function isKnownSourceName(value: string): boolean {
-  return SOURCE_IDENTIFIERS.includes(value as (typeof SOURCE_IDENTIFIERS)[number]);
-}
+]);

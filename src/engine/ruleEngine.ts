@@ -1,19 +1,11 @@
-import type { Finding, ParsedFile, RuleDefinition } from "./findings.js";
+import type { Finding, Rule, RuleContext } from "./findings.js";
 
-export function runRules(files: ParsedFile[], rules: RuleDefinition[]): Finding[] {
+export function runRules(context: RuleContext, rules: Rule[]): Finding[] {
   const findings: Finding[] = [];
 
-  for (const file of files) {
-    for (const rule of rules) {
-      findings.push(...rule.run({ file }));
-    }
+  for (const rule of rules) {
+    findings.push(...rule.run(context));
   }
 
-  return findings.sort((left, right) => {
-    if (left.filePath === right.filePath) {
-      return (left.location?.line ?? Number.MAX_SAFE_INTEGER) - (right.location?.line ?? Number.MAX_SAFE_INTEGER);
-    }
-
-    return left.filePath.localeCompare(right.filePath);
-  });
+  return findings;
 }

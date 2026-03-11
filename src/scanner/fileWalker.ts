@@ -1,29 +1,29 @@
-import { stat } from "node:fs/promises";
+import fs from "node:fs/promises";
 import path from "node:path";
-
 import fg from "fast-glob";
 
-const DEFAULT_PATTERNS = ["**/*.{js,jsx,ts,tsx,mjs,cjs}"];
-const DEFAULT_IGNORES = [
+const DEFAULT_PATTERNS = ["**/*.{js,jsx,ts,tsx}"];
+const DEFAULT_IGNORE = [
   "**/node_modules/**",
   "**/dist/**",
-  "**/build/**",
+  "**/.git/**",
   "**/coverage/**",
-  "**/*.d.ts",
-] as const;
+];
 
-export async function findSourceFiles(targetPath: string): Promise<string[]> {
-  const resolvedPath = path.resolve(targetPath);
-  const fileStats = await stat(resolvedPath);
+export async function collectSourceFiles(inputPath: string): Promise<string[]> {
+  const resolvedPath = path.resolve(inputPath);
+  const stats = await fs.stat(resolvedPath);
 
-  if (fileStats.isFile()) {
+  if (stats.isFile()) {
     return [resolvedPath];
   }
 
-  return fg(DEFAULT_PATTERNS, {
+  const files = await fg(DEFAULT_PATTERNS, {
     cwd: resolvedPath,
     absolute: true,
     onlyFiles: true,
-    ignore: [...DEFAULT_IGNORES],
+    ignore: DEFAULT_IGNORE,
   });
+
+  return files.sort();
 }

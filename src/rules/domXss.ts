@@ -1,91 +1,227 @@
-import traverse from "@babel/traverse";
-import type { AssignmentExpression, CallExpression, JSXAttribute, MemberExpression } from "@babel/types";
-import { isIdentifier, isJSXIdentifier, isMemberExpression, isStringLiteral } from "@babel/types";
+import traverseModule from "@babel/traverse";
+import * as t from "@babel/types";
+import { createFinding, type Finding, type Rule } from "../engine/findings.js";
+import { TAINT_SOURCES } from "../utils/sources.js";
+import { DANGEROUS_CALLS, HTML_SINK_PROPERTIES } from "../utils/sinks.js";
 
-import { createFinding, type Finding, type RuleDefinition } from "../engine/findings.js";
-
-const HTML_SINK_PROPERTIES = new Set(["innerHTML", "outerHTML", "srcdoc"]);
-const HTML_SINK_METHODS = new Set(["insertAdjacentHTML", "write", "writeln"]);
-
-function getMemberPropertyName(node: MemberExpression): string | undefined {
-  if (isIdentifier(node.property)) {
+function getMemberPropertyName(node: t.MemberExpression): string | null {
+  if (!node.computed && t.isIdentifier(node.property)) {
     return node.property.name;
   }
 
-  if (isStringLiteral(node.property)) {
+  if (node.computed && t.isStringLiteral(node.property)) {
     return node.property.value;
   }
 
-  return undefined;
+  return null;
 }
 
-export const domXssRule: RuleDefinition = {
-  id: "dom-xss",
-  title: "DOM XSS sink usage",
-  description: "Flags common HTML injection sinks.",
-  run({ file }) {
+function memberExpressionToString(node: t.MemberExpression): string | null {
+  const parts: string[] = [];
+  let current: t.Expression | t.Super = node;
+
+  while (t.isMemberExpression(current)) {
+    const propertyName = getMemberPropertyName(current);
+    if (!propertyName) return null;
+
+    parts.unshift(propertyName);
+    current = current.object;
+  }
+
+  if (t.isIdentifier(current)) {
+    parts.unshift(current.name);
+    return parts.join(".");
+  }
+
+  return null;
+}
+
+function isSourceMemberExpression(node: t.Node): boolean {
+  if (!t.isMemberExpression(node)) return false;
+
+  const text = memberExpressionToString(node);
+  return text !== null && TAINT_SOURCES.has(text);
+}
+
+function isTainted(node: t.Node | null | undefined, taintedVars: Set<string>): boolean {
+  if (!node) return false;
+
+  if (t.isIdentifier(node)) {
+    return taintedVars.has(node.name);
+  }
+
+  if (isSourceMemberExpression(node)) {
+    return true;
+  }
+
+  if (t.isTemplateLiteral(node)) {
+    return node.expressions.some((expr) => isTainted(expr, taintedVars));
+  }
+
+  if (t.isBinaryExpression(node)) {
+    return isTainted(node.left, taintedVars) || isTainted(node.right, taintedVars);
+  }
+
+  if (t.isLogicalExpression(node)) {
+    return isTainted(node.left, taintedVars) || isTainted(node.right, taintedVars);
+  }
+
+  if (t.isConditionalExpression(node)) {
+    return (
+      isTainted(node.test, taintedVars) ||
+      isTainted(node.consequent, taintedVars) ||
+      isTainted(node.alternate, taintedVars)
+    );
+  }
+
+  if (t.isCallExpression(node)) {
+    return node.arguments.some((arg) => {
+      if (t.isSpreadElement(arg) || t.isArgumentPlaceholder(arg)) return false;
+      return isTainted(arg, taintedVars);
+    });
+  }
+
+  return false;
+}
+
+export const domXssRule: Rule = {
+  id: "DOM_XSS",
+  description: "Detects obvious DOM XSS source-to-sink patterns",
+  run(context) {
     const findings: Finding[] = [];
+    const taintedVars = new Set<string>();
+    const traverse =
+      typeof traverseModule === "function"
+        ? traverseModule
+        : traverseModule.default;
+      traverse(context.ast, {
+      VariableDeclarator(path) {
+        const { id, init } = path.node;
 
-    traverse(file.ast, {
-      AssignmentExpression(path: { node: AssignmentExpression }) {
-        if (!isMemberExpression(path.node.left)) {
-          return;
+        if (t.isIdentifier(id) && isTainted(init, taintedVars)) {
+          taintedVars.add(id.name);
         }
-
-        const propertyName = getMemberPropertyName(path.node.left);
-
-        if (!propertyName || !HTML_SINK_PROPERTIES.has(propertyName)) {
-          return;
-        }
-
-        findings.push(
-          createFinding(
-            domXssRule,
-            file.filePath,
-            "high",
-            `${propertyName} is used as an HTML injection sink.`,
-            path.node,
-            propertyName,
-          ),
-        );
       },
-      CallExpression(path: { node: CallExpression }) {
-        if (!isMemberExpression(path.node.callee)) {
-          return;
+
+      AssignmentExpression(path) {
+        const { left, right } = path.node;
+
+        if (t.isIdentifier(left) && isTainted(right, taintedVars)) {
+          taintedVars.add(left.name);
         }
 
-        const propertyName = getMemberPropertyName(path.node.callee);
+        if (t.isMemberExpression(left)) {
+          const propertyName = getMemberPropertyName(left);
 
-        if (!propertyName || !HTML_SINK_METHODS.has(propertyName)) {
-          return;
+          if (
+            propertyName &&
+            HTML_SINK_PROPERTIES.has(propertyName) &&
+            isTainted(right, taintedVars)
+          ) {
+            findings.push(
+              createFinding({
+                ruleId: "DOM_XSS",
+                severity: "HIGH",
+                message: `Tainted data flows into ${propertyName}`,
+                filePath: context.filePath,
+                node: path.node,
+              }),
+            );
+          }
         }
-
-        findings.push(
-          createFinding(
-            domXssRule,
-            file.filePath,
-            "high",
-            `${propertyName}() writes raw HTML into the DOM.`,
-            path.node,
-            propertyName,
-          ),
-        );
       },
-      JSXAttribute(path: { node: JSXAttribute }) {
-        if (!isJSXIdentifier(path.node.name) || path.node.name.name !== "dangerouslySetInnerHTML") {
-          return;
+
+      CallExpression(path) {
+        const { callee, arguments: args } = path.node;
+
+        if (t.isMemberExpression(callee)) {
+          const calleeText = memberExpressionToString(callee);
+          const propertyName = getMemberPropertyName(callee);
+
+          if (calleeText && DANGEROUS_CALLS.has(calleeText)) {
+            const firstArg = args[0];
+            if (
+              firstArg &&
+              !t.isSpreadElement(firstArg) &&
+              !t.isArgumentPlaceholder(firstArg) &&
+              isTainted(firstArg, taintedVars)
+            ) {
+              findings.push(
+                createFinding({
+                  ruleId: "DOM_XSS",
+                  severity: "HIGH",
+                  message: `Tainted data reaches dangerous call ${calleeText}`,
+                  filePath: context.filePath,
+                  node: path.node,
+                }),
+              );
+            }
+          }
+
+          if (propertyName === "insertAdjacentHTML") {
+            const secondArg = args[1];
+            if (
+              secondArg &&
+              !t.isSpreadElement(secondArg) &&
+              !t.isArgumentPlaceholder(secondArg) &&
+              isTainted(secondArg, taintedVars)
+            ) {
+              findings.push(
+                createFinding({
+                  ruleId: "DOM_XSS",
+                  severity: "HIGH",
+                  message: "Tainted data flows into insertAdjacentHTML",
+                  filePath: context.filePath,
+                  node: path.node,
+                }),
+              );
+            }
+          }
         }
 
-        findings.push(
-          createFinding(
-            domXssRule,
-            file.filePath,
-            "high",
-            "dangerouslySetInnerHTML bypasses React escaping.",
-            path.node,
-            "dangerouslySetInnerHTML",
-          ),
-        );
+        if (t.isIdentifier(callee) && callee.name === "eval") {
+          const firstArg = args[0];
+          if (
+            firstArg &&
+            !t.isSpreadElement(firstArg) &&
+            !t.isArgumentPlaceholder(firstArg) &&
+            isTainted(firstArg, taintedVars)
+          ) {
+            findings.push(
+              createFinding({
+                ruleId: "DOM_XSS",
+                severity: "HIGH",
+                message: "Tainted data reaches eval",
+                filePath: context.filePath,
+                node: path.node,
+              }),
+            );
+          }
+        }
+      },
+
+      NewExpression(path) {
+        const { callee } = path.node;
+        const args = path.node.arguments ?? [];
+
+        if (t.isIdentifier(callee) && callee.name === "Function") {
+          const hasTaintedArg = args.some((arg: (typeof args)[number]) => {
+            if (t.isSpreadElement(arg) || t.isArgumentPlaceholder(arg)) return false;
+            return isTainted(arg, taintedVars);
+          });
+
+          if (hasTaintedArg) {
+            findings.push(
+              createFinding({
+                ruleId: "DOM_XSS",
+                severity: "HIGH",
+                message: "Tainted data reaches new Function",
+                filePath: context.filePath,
+                node: path.node,
+              }),
+            );
+          }
+        }
       },
     });
 

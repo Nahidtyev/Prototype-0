@@ -1,65 +1,53 @@
+import fs from "node:fs/promises";
 import path from "node:path";
-
+import { collectSourceFiles } from "./scanner/fileWalker.js";
+import { parseSource } from "./scanner/parser.js";
+import { printFindings } from "./scanner/report.js";
 import { runRules } from "./engine/ruleEngine.js";
-import type { ParseFailure, ParsedFile, RuleDefinition } from "./engine/findings.js";
+import type { Finding } from "./engine/findings.js";
 import { domXssRule } from "./rules/domXss.js";
-import { findSourceFiles } from "./scanner/fileWalker.js";
-import { isParsedFile, parseFile } from "./scanner/parser.js";
 
-const rules: RuleDefinition[] = [domXssRule];
-
-function formatFilePath(filePath: string): string {
-  return path.relative(process.cwd(), filePath) || path.basename(filePath);
-}
-
-function printParseFailures(parseFailures: ParseFailure[]): void {
-  for (const failure of parseFailures) {
-    const line = failure.location?.line ?? 0;
-    const message = `${formatFilePath(failure.filePath)}:${line} parse-error error ${failure.message}`;
-    console.error(message);
-  }
-}
-
-function printFindings(parsedFindings: ReturnType<typeof runRules>): void {
-  for (const finding of parsedFindings) {
-    const line = finding.location?.line ?? 0;
-    console.log(
-      `${formatFilePath(finding.filePath)}:${line} ${finding.ruleId} ${finding.severity} ${finding.message}`,
-    );
-  }
-}
-
-async function main(): Promise<void> {
+async function main() {
   const targetPath = process.argv[2] ?? ".";
-  const filePaths = await findSourceFiles(targetPath);
+  const resolvedTarget = path.resolve(targetPath);
 
-  const parsedResults = await Promise.all(filePaths.map((filePath) => parseFile(filePath)));
-  const parsedFiles: ParsedFile[] = [];
-  const parseFailures: ParseFailure[] = [];
+  const files = await collectSourceFiles(resolvedTarget);
 
-  for (const result of parsedResults) {
-    if (isParsedFile(result)) {
-      parsedFiles.push(result);
-      continue;
+  if (files.length === 0) {
+    console.log("No source files found.");
+    return;
+  }
+
+  const allFindings: Finding[] = [];
+
+  for (const filePath of files) {
+    try {
+      const code = await fs.readFile(filePath, "utf8");
+      const ast = parseSource(code, filePath);
+
+      const findings = runRules(
+        { filePath, code, ast },
+        [domXssRule],
+      );
+
+      allFindings.push(...findings);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown parsing error";
+
+      allFindings.push({
+        ruleId: "PARSER_ERROR",
+        severity: "LOW",
+        message,
+        filePath,
+      });
     }
-
-    parseFailures.push(result);
   }
 
-  const findings = runRules(parsedFiles, rules);
-
-  printParseFailures(parseFailures);
-  printFindings(findings);
-
-  if (parseFailures.length === 0 && findings.length === 0) {
-    console.log("No findings.");
-  }
-
-  process.exitCode = findings.length > 0 || parseFailures.length > 0 ? 1 : 0;
+  printFindings(allFindings);
 }
 
-main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(message);
-  process.exitCode = 1;
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
