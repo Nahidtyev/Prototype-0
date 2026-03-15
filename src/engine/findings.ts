@@ -15,7 +15,7 @@ export interface Finding {
 export interface RuleContext {
   filePath: string;
   code: string;
-  ast: ParseResult<t.File>;
+  ast: ParseResult<t.File> | null;
 }
 
 export interface Rule {

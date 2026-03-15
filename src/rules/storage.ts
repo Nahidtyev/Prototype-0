@@ -1,7 +1,17 @@
-import traverseModule from "@babel/traverse";
+import traverseImport from "@babel/traverse";
 import * as t from "@babel/types";
 import { createFinding, type Finding, type Rule } from "../engine/findings.js";
 import { SENSITIVE_STORAGE_KEYS } from "../utils/sensitiveKeys.js";
+
+const traverse: typeof traverseImport =
+  typeof traverseImport === "function"
+    ? traverseImport
+    : (traverseImport as unknown as { default: typeof traverseImport }).default;
+
+type TraverseVisitors = Parameters<typeof traverse>[1];
+type VisitorPath<TNode extends t.Node> = Parameters<TraverseVisitors[string]>[0] & {
+  node: TNode;
+};
 
 function getMemberPropertyName(node: t.MemberExpression): string | null {
   if (!node.computed && t.isIdentifier(node.property)) {
@@ -65,15 +75,12 @@ export const storageRule: Rule = {
   id: "INSECURE_STORAGE",
   description: "Detects suspicious storage of sensitive data in browser storage",
   run(context) {
+    if (!context.ast) return [];
+
     const findings: Finding[] = [];
 
-    const traverse =
-      typeof traverseModule === "function"
-        ? traverseModule
-        : traverseModule.default;
-
     traverse(context.ast, {
-      CallExpression(path) {
+      CallExpression(path: VisitorPath<t.CallExpression>) {
         const { callee, arguments: args } = path.node;
 
         if (!isStorageTarget(callee)) return;

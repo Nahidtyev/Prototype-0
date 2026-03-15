@@ -1,8 +1,18 @@
-import traverseModule from "@babel/traverse";
+import traverseImport from "@babel/traverse";
 import * as t from "@babel/types";
 import { createFinding, type Finding, type Rule } from "../engine/findings.js";
 import { TAINT_SOURCES } from "../utils/sources.js";
 import { DANGEROUS_CALLS, HTML_SINK_PROPERTIES } from "../utils/sinks.js";
+
+const traverse: typeof traverseImport =
+  typeof traverseImport === "function"
+    ? traverseImport
+    : (traverseImport as unknown as { default: typeof traverseImport }).default;
+
+type TraverseVisitors = Parameters<typeof traverse>[1];
+type VisitorPath<TNode extends t.Node> = Parameters<TraverseVisitors[string]>[0] & {
+  node: TNode;
+};
 
 function getMemberPropertyName(node: t.MemberExpression): string | null {
   if (!node.computed && t.isIdentifier(node.property)) {
@@ -88,14 +98,13 @@ export const domXssRule: Rule = {
   id: "DOM_XSS",
   description: "Detects obvious DOM XSS source-to-sink patterns",
   run(context) {
+    if (!context.ast) return [];
+
     const findings: Finding[] = [];
     const taintedVars = new Set<string>();
-    const traverse =
-      typeof traverseModule === "function"
-        ? traverseModule
-        : traverseModule.default;
-      traverse(context.ast, {
-      VariableDeclarator(path) {
+
+    traverse(context.ast, {
+      VariableDeclarator(path: VisitorPath<t.VariableDeclarator>) {
         const { id, init } = path.node;
 
         if (t.isIdentifier(id) && isTainted(init, taintedVars)) {
@@ -103,7 +112,7 @@ export const domXssRule: Rule = {
         }
       },
 
-      AssignmentExpression(path) {
+      AssignmentExpression(path: VisitorPath<t.AssignmentExpression>) {
         const { left, right } = path.node;
 
         if (t.isIdentifier(left) && isTainted(right, taintedVars)) {
@@ -131,7 +140,7 @@ export const domXssRule: Rule = {
         }
       },
 
-      CallExpression(path) {
+      CallExpression(path: VisitorPath<t.CallExpression>) {
         const { callee, arguments: args } = path.node;
 
         if (t.isMemberExpression(callee)) {
@@ -200,7 +209,7 @@ export const domXssRule: Rule = {
         }
       },
 
-      NewExpression(path) {
+      NewExpression(path: VisitorPath<t.NewExpression>) {
         const { callee } = path.node;
         const args = path.node.arguments ?? [];
 

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import fg from "fast-glob";
 
-const DEFAULT_PATTERNS = ["**/*.{js,jsx,ts,tsx}"];
+const DEFAULT_PATTERNS = ["**/*.{js,jsx,ts,tsx,html}"];
 const DEFAULT_IGNORE = [
   "**/node_modules/**",
   "**/dist/**",
