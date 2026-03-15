@@ -9,7 +9,7 @@ import { domXssRule } from "./rules/domXss.js";
 import { storageRule } from "./rules/storage.js";
 import { thirdPartyScriptsRule } from "./rules/thirdPartyScripts.js";
 import { isJavaScriptLikeFile } from "./utils/urls.js";
-
+import { runDynamicScan } from './dynamic/scanner/dynamicScanner.js';
 async function main() {
   const targetPath = process.argv[2] ?? ".";
   const resolvedTarget = path.resolve(targetPath);
@@ -49,7 +49,40 @@ async function main() {
 
   printFindings(allFindings);
 }
+const args = process.argv.slice(2);
+const command = args[0];
 
+if (command === 'dynamic') {
+  const url = getArgValue(args, '--url');
+  const outputPath = getArgValue(args, '--output');
+  const includeRawEvents = args.includes('--include-raw');
+  const headless = !args.includes('--headed');
+
+  if (!url) {
+    console.error(
+      'Usage: node dist/cli.js dynamic --url http://localhost:3000 [--output artifacts/dynamic-report.json] [--include-raw] [--headed]',
+    );
+    process.exit(1);
+  }
+
+  const result = await runDynamicScan({
+    url,
+    headless,
+    outputPath,
+    includeRawEvents,
+  });
+
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(0);
+}
+function getArgValue(args: string[], flag: string): string | undefined {
+  const index = args.indexOf(flag);
+  if (index === -1) {
+    return undefined;
+  }
+
+  return args[index + 1];
+}
 main().catch((error) => {
   console.error(error);
   process.exit(1);

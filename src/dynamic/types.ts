@@ -1,0 +1,122 @@
+export type DynamicCategory =
+  | 'DOM_XSS'
+  | 'INSECURE_STORAGE'
+  | 'THIRD_PARTY_SCRIPT';
+
+export type DynamicSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type DynamicRuleId =
+  | 'DOM_SINK_USAGE'
+  | 'BROWSER_STORAGE_WRITE'
+  | 'DYNAMIC_SCRIPT_CREATION'
+  | 'SCRIPT_SRC_ASSIGNMENT'
+  | 'EXTERNAL_SCRIPT_LOAD';
+
+export type RuntimeEventType =
+  | 'innerHTML'
+  | 'outerHTML'
+  | 'document.write'
+  | 'eval'
+  | 'Function'
+  | 'localStorage.setItem'
+  | 'sessionStorage.setItem'
+  | 'script.create'
+  | 'script.src'
+  | 'script.setAttribute.src'
+  | 'script.appendChild'
+  | 'script.insertBefore';
+
+export interface RuntimeLocation {
+  pageUrl: string;
+  frameUrl?: string | undefined;
+  stack?: string | undefined;
+}
+
+export interface RuntimeEventBase {
+  type: RuntimeEventType;
+  timestamp: string;
+  location: RuntimeLocation;
+}
+
+export interface DomSinkRuntimeEvent extends RuntimeEventBase {
+  type: 'innerHTML' | 'outerHTML' | 'document.write' | 'eval' | 'Function';
+  valuePreview?: string | undefined;
+}
+
+export interface StorageRuntimeEvent extends RuntimeEventBase {
+  type: 'localStorage.setItem' | 'sessionStorage.setItem';
+  key?: string | undefined;
+  valuePreview?: string | undefined;
+}
+
+export interface ScriptRuntimeEvent extends RuntimeEventBase {
+  type:
+    | 'script.create'
+    | 'script.src'
+    | 'script.setAttribute.src'
+    | 'script.appendChild'
+    | 'script.insertBefore';
+  src?: string | undefined;
+  isExternal?: boolean | undefined;
+  tagName?: string | undefined;
+}
+
+export type RawRuntimeEvent =
+  | DomSinkRuntimeEvent
+  | StorageRuntimeEvent
+  | ScriptRuntimeEvent;
+
+export interface RawNetworkEvent {
+  type: 'external-script-request';
+  timestamp: string;
+  pageUrl: string;
+  frameUrl?: string | undefined;
+  requestUrl: string;
+  method: string;
+  resourceType: 'script';
+  isExternal: boolean;
+}
+
+export interface DynamicCorrelation {
+  fingerprint: string;
+  locationHint?: string | undefined;
+}
+
+export interface DynamicFinding {
+  id: string;
+  source: 'dynamic';
+  ruleId: DynamicRuleId;
+  category: DynamicCategory;
+  severity: DynamicSeverity;
+  message: string;
+  pageUrl: string;
+  frameUrl?: string | undefined;
+  observedAt: string;
+  evidence: Record<string, unknown>;
+  correlation: DynamicCorrelation;
+}
+
+export interface DynamicScanMetadata {
+  startedAt: string;
+  finishedAt: string;
+  targetUrl: string;
+  browser: 'chromium';
+}
+
+export interface DynamicScanResult {
+  metadata: DynamicScanMetadata;
+  findings: DynamicFinding[];
+  rawEvents?: {
+    runtime: RawRuntimeEvent[];
+    network: RawNetworkEvent[];
+  } | undefined;
+}
+
+export interface DynamicScanOptions {
+  url: string;
+  headless?: boolean | undefined;
+  timeoutMs?: number | undefined;
+  postLoadWaitMs?: number | undefined;
+  outputPath?: string | undefined;
+  includeRawEvents?: boolean | undefined;
+}
