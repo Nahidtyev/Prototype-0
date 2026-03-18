@@ -1,0 +1,262 @@
+{
+  "metadata": {
+    "startedAt": "2026-03-15T14:28:47.016Z",
+    "finishedAt": "2026-03-15T14:28:49.657Z",
+    "targetUrl": "http://localhost:8080/",
+    "browser": "chromium"
+  },
+  "findings": [
+    {
+      "id": "dynamic-a26db9104248f44f",
+      "source": "dynamic",
+      "ruleId": "DOM_SINK_USAGE",
+      "category": "DOM_XSS",
+      "severity": "HIGH",
+      "message": "Runtime DOM sink usage detected: innerHTML",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.611Z",
+      "evidence": {
+        "sink": "innerHTML",
+        "valuePreview": "<img src=x onerror=alert(1)>",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLDivElement.set [as innerHTML] (<anonymous>:134:31)\nat http://localhost:8080/:13:48"
+      },
+      "correlation": {
+        "fingerprint": "a26db9104248f44f",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-fd484f71f1a1e782",
+      "source": "dynamic",
+      "ruleId": "DOM_SINK_USAGE",
+      "category": "DOM_XSS",
+      "severity": "HIGH",
+      "message": "Runtime DOM sink usage detected: document.write",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.613Z",
+      "evidence": {
+        "sink": "document.write",
+        "valuePreview": "<p>document.write called</p>",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLDocument.patchedWrite [as write] (<anonymous>:154:27)\nat http://localhost:8080/:14:16"
+      },
+      "correlation": {
+        "fingerprint": "fd484f71f1a1e782",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-1dc36aaa7f75fe85",
+      "source": "dynamic",
+      "ruleId": "DOM_SINK_USAGE",
+      "category": "DOM_XSS",
+      "severity": "HIGH",
+      "message": "Runtime DOM sink usage detected: eval",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.614Z",
+      "evidence": {
+        "sink": "eval",
+        "valuePreview": "console.log('eval called')",
+        "stack": "at getLocation (<anonymous>:70:20)\nat patchedEval (<anonymous>:169:27)\nat http://localhost:8080/:15:7"
+      },
+      "correlation": {
+        "fingerprint": "1dc36aaa7f75fe85",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-56adcad4a7befdee",
+      "source": "dynamic",
+      "ruleId": "BROWSER_STORAGE_WRITE",
+      "category": "INSECURE_STORAGE",
+      "severity": "MEDIUM",
+      "message": "Browser storage write detected: localStorage.setItem",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.614Z",
+      "evidence": {
+        "storage": "localStorage",
+        "key": "token",
+        "valuePreview": "demo-secret",
+        "stack": "at getLocation (<anonymous>:62:20)\nat Storage.patchedSetItem [as setItem] (<anonymous>:98:27)\nat http://localhost:8080/:16:20"
+      },
+      "correlation": {
+        "fingerprint": "56adcad4a7befdee",
+        "locationHint": "at getLocation (<anonymous>:62:20)"
+      }
+    },
+    {
+      "id": "dynamic-a21e027fefc77fe5",
+      "source": "dynamic",
+      "ruleId": "BROWSER_STORAGE_WRITE",
+      "category": "INSECURE_STORAGE",
+      "severity": "MEDIUM",
+      "message": "Browser storage write detected: sessionStorage.setItem",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.616Z",
+      "evidence": {
+        "storage": "sessionStorage",
+        "key": "jwt",
+        "valuePreview": "demo-jwt",
+        "stack": "at getLocation (<anonymous>:62:20)\nat Storage.patchedSetItem [as setItem] (<anonymous>:98:27)\nat http://localhost:8080/:17:22"
+      },
+      "correlation": {
+        "fingerprint": "a21e027fefc77fe5",
+        "locationHint": "at getLocation (<anonymous>:62:20)"
+      }
+    },
+    {
+      "id": "dynamic-09941069086ed145",
+      "source": "dynamic",
+      "ruleId": "DYNAMIC_SCRIPT_CREATION",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "MEDIUM",
+      "message": "Dynamic script activity detected: script.create",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.617Z",
+      "evidence": {
+        "action": "script.create",
+        "tagName": "SCRIPT",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLDocument.patchedCreateElement [as createElement] (<anonymous>:206:31)\nat http://localhost:8080/:19:32"
+      },
+      "correlation": {
+        "fingerprint": "09941069086ed145",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-3220ab26043e254e",
+      "source": "dynamic",
+      "ruleId": "SCRIPT_SRC_ASSIGNMENT",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "HIGH",
+      "message": "Script source assignment detected: script.src",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.617Z",
+      "evidence": {
+        "action": "script.src",
+        "src": "https://cdn.example.com/library.js",
+        "isExternal": true,
+        "tagName": "SCRIPT",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLScriptElement.set [as src] (<anonymous>:233:31)\nat http://localhost:8080/:20:19"
+      },
+      "correlation": {
+        "fingerprint": "3220ab26043e254e",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-c2639ebc22883da8",
+      "source": "dynamic",
+      "ruleId": "DYNAMIC_SCRIPT_CREATION",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "HIGH",
+      "message": "Dynamic script activity detected: script.appendChild",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.618Z",
+      "evidence": {
+        "action": "script.appendChild",
+        "src": "https://cdn.example.com/library.js",
+        "isExternal": true,
+        "tagName": "SCRIPT",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLBodyElement.patchedAppendChild [as appendChild] (<anonymous>:283:35)\nat http://localhost:8080/:21:21"
+      },
+      "correlation": {
+        "fingerprint": "c2639ebc22883da8",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-350462d84edc73ce",
+      "source": "dynamic",
+      "ruleId": "SCRIPT_SRC_ASSIGNMENT",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "HIGH",
+      "message": "Script source assignment detected: script.setAttribute.src",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.619Z",
+      "evidence": {
+        "action": "script.setAttribute.src",
+        "src": "https://evil.example.com/payload.js",
+        "isExternal": true,
+        "tagName": "SCRIPT",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLScriptElement.patchedSetAttribute [as setAttribute] (<anonymous>:260:31)\nat http://localhost:8080/:24:15"
+      },
+      "correlation": {
+        "fingerprint": "350462d84edc73ce",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-75fc1d67725da84f",
+      "source": "dynamic",
+      "ruleId": "DYNAMIC_SCRIPT_CREATION",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "HIGH",
+      "message": "Dynamic script activity detected: script.appendChild",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.619Z",
+      "evidence": {
+        "action": "script.appendChild",
+        "src": "https://evil.example.com/payload.js",
+        "isExternal": true,
+        "tagName": "SCRIPT",
+        "stack": "at getLocation (<anonymous>:70:20)\nat HTMLBodyElement.patchedAppendChild [as appendChild] (<anonymous>:283:35)\nat http://localhost:8080/:25:21"
+      },
+      "correlation": {
+        "fingerprint": "75fc1d67725da84f",
+        "locationHint": "at getLocation (<anonymous>:70:20)"
+      }
+    },
+    {
+      "id": "dynamic-588bbea1ef2cf68f",
+      "source": "dynamic",
+      "ruleId": "EXTERNAL_SCRIPT_LOAD",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "HIGH",
+      "message": "External script load detected: https://cdn.example.com/library.js",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.636Z",
+      "evidence": {
+        "requestUrl": "https://cdn.example.com/library.js",
+        "method": "GET",
+        "resourceType": "script",
+        "isExternal": true
+      },
+      "correlation": {
+        "fingerprint": "588bbea1ef2cf68f",
+        "locationHint": "https://cdn.example.com/library.js"
+      }
+    },
+    {
+      "id": "dynamic-5dfd96979e4ecef3",
+      "source": "dynamic",
+      "ruleId": "EXTERNAL_SCRIPT_LOAD",
+      "category": "THIRD_PARTY_SCRIPT",
+      "severity": "HIGH",
+      "message": "External script load detected: https://evil.example.com/payload.js",
+      "pageUrl": "http://localhost:8080/",
+      "frameUrl": "http://localhost:8080/",
+      "observedAt": "2026-03-15T14:28:47.638Z",
+      "evidence": {
+        "requestUrl": "https://evil.example.com/payload.js",
+        "method": "GET",
+        "resourceType": "script",
+        "isExternal": true
+      },
+      "correlation": {
+        "fingerprint": "5dfd96979e4ecef3",
+        "locationHint": "https://evil.example.com/payload.js"
+      }
+    }
+  ]
+}
