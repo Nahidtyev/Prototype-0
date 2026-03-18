@@ -105,7 +105,7 @@ export interface DynamicScanMetadata {
 
 export interface DynamicScanResult {
   metadata: DynamicScanMetadata;
-  findings: DynamicFinding[];
+  findings: NormalizedFinding[];
   rawEvents?: {
     runtime: RawRuntimeEvent[];
     network: RawNetworkEvent[];
@@ -119,4 +119,51 @@ export interface DynamicScanOptions {
   postLoadWaitMs?: number | undefined;
   outputPath?: string | undefined;
   includeRawEvents?: boolean | undefined;
+}
+
+
+export interface DynamicRuntimeEvent {
+  type: string;
+  timestamp?: string;
+  location?: RuntimeLocation;
+  valuePreview?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
+export interface DynamicNetworkEvent {
+  type: string;
+  timestamp?: string;
+  location?: RuntimeLocation;
+  valuePreview?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
+export type CorrelationSignals = {
+  findingFamily?: "dom" | "storage" | "script";
+  sink?: string;
+  locationToken?: string;
+  storageKeyToken?: string;
+  resourceToken?: string;
+};
+
+export interface NormalizedFinding {
+  type:
+    | "DOM_SINK_USAGE"
+    | "BROWSER_STORAGE_WRITE"
+    | "DYNAMIC_SCRIPT_CREATION"
+    | "SCRIPT_SRC_ASSIGNMENT"
+    | "EXTERNAL_SCRIPT_LOAD";
+  category: "dynamic";
+  subtype: "dom" | "storage" | "script";
+  severity: "LOW" | "MEDIUM" | "HIGH";
+  title: string;
+  description: string;
+  source: "runtime" | "network";
+  timestamp?: string;
+  locationHint: string;
+  correlationFingerprint: string;
+  correlationSignals?: CorrelationSignals;
+  evidence: Record<string, unknown>;
 }
