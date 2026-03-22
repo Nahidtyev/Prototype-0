@@ -10,6 +10,7 @@ export interface Finding {
   filePath: string;
   line?: number;
   column?: number;
+  [key: string]: unknown;
 }
 
 export interface RuleContext {
@@ -30,17 +31,20 @@ export function createFinding(params: {
   message: string;
   filePath: string;
   node?: t.Node;
-}): Finding {
+} & Record<string, unknown>): Finding {
+  const { ruleId, severity, message, filePath, node, ...extra } = params;
+
   const finding: Finding = {
-    ruleId: params.ruleId,
-    severity: params.severity,
-    message: params.message,
-    filePath: params.filePath,
+    ruleId,
+    severity,
+    message,
+    filePath,
+    ...extra,
   };
 
-  if (params.node?.loc) {
-    finding.line = params.node.loc.start.line;
-    finding.column = params.node.loc.start.column;
+  if (node?.loc) {
+    finding.line = node.loc.start.line;
+    finding.column = node.loc.start.column;
   }
 
   return finding;

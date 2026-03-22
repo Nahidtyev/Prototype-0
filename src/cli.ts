@@ -1,5 +1,7 @@
+import { handleCorrelationCommand } from './correlation/command.js';
 import fs from "node:fs/promises";
 import path from "node:path";
+import { writeStaticJsonReport } from "./static/scanner/jsonReport.js";
 import { collectSourceFiles } from "./static/scanner/fileWalker.js";
 import { parseSource } from "./static/scanner/parser.js";
 import { printFindings } from "./static/scanner/report.js";
@@ -10,8 +12,18 @@ import { storageRule } from "./static/rules/storage.js";
 import { thirdPartyScriptsRule } from "./static/rules/thirdPartyScripts.js";
 import { isJavaScriptLikeFile } from "./static/utils/urls.js";
 import { runDynamicScan } from './dynamic/scanner/dynamicScanner.js';
+
 async function main() {
-  const targetPath = process.argv[2] ?? ".";
+  const [, , firstArg, ...remainingArgs] = process.argv;
+
+  if (firstArg === "correlate") {
+    process.exitCode = await handleCorrelationCommand(remainingArgs);
+    return;
+  }
+
+  const targetPath =
+    firstArg !== undefined && !firstArg.startsWith("--") ? firstArg : ".";
+  const outputPath = getArgValue(process.argv.slice(2), "--output");
   const resolvedTarget = path.resolve(targetPath);
 
   const files = await collectSourceFiles(resolvedTarget);
@@ -47,8 +59,24 @@ async function main() {
     }
   }
 
+  if (outputPath) {
+    await writeStaticJsonReport(allFindings, resolvedTarget, outputPath);
+    console.log(
+      JSON.stringify(
+        {
+          output: outputPath,
+          findingCount: allFindings.length,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
   printFindings(allFindings);
 }
+
 const args = process.argv.slice(2);
 const command = args[0];
 

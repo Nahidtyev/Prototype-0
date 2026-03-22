@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "mode": "static",
+    "generatedAt": "2026-03-22T16:46:20.560Z",
+    "targetPath": "C:\\Users\\nahid\\Downloads\\Master Thesis\\Prototype-0\\test-apps",
+    "findingCount": 8
+  },
+  "findings": [
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:4:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
+      "ruleId": "DOM_XSS",
+      "line": 4,
+      "column": 0,
+      "sink": "innerhtml",
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:4:1",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data reaches dangerous call document.write",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:6:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
+      "ruleId": "DOM_XSS",
+      "line": 6,
+      "column": 0,
+      "sink": "documentwrite",
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:6:1",
+        "sink": "documentwrite"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data reaches eval",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:9:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
+      "ruleId": "DOM_XSS",
+      "line": 9,
+      "column": 0,
+      "sink": "eval",
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:9:1",
+        "sink": "eval"
+      }
+    },
+    {
+      "category": "static",
+      "type": "SCRIPT_REFERENCE",
+      "subtype": "script",
+      "severity": "MEDIUM",
+      "title": "Static script finding: THIRD_PARTY_SCRIPT",
+      "description": "External script \"https://cdn.jsdelivr.net/npm/example-lib@1.0.0/dist/lib.min.js\" is missing integrity attribute",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html:4:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html",
+      "ruleId": "THIRD_PARTY_SCRIPT",
+      "line": 4,
+      "column": 0,
+      "sink": "scriptsrcassignment",
+      "resourceUrl": "cdn.jsdelivr.net/npm/example-lib@1.0.0/dist/lib.min.js",
+      "correlationSignals": {
+        "findingFamily": "script",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html:4:1",
+        "sink": "scriptsrcassignment",
+        "resourceToken": "cdn.jsdelivr.net/npm/example-lib@1.0.0/dist/lib.min.js"
+      }
+    },
+    {
+      "category": "static",
+      "type": "BROWSER_STORAGE_USAGE",
+      "subtype": "storage",
+      "severity": "MEDIUM",
+      "title": "Static storage finding: INSECURE_STORAGE",
+      "description": "Sensitive value stored in localStorage under key \"token\"",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:1:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts",
+      "ruleId": "INSECURE_STORAGE",
+      "line": 1,
+      "column": 0,
+      "sink": "localstorage",
+      "storageKey": "token",
+      "storageKind": "localStorage",
+      "correlationSignals": {
+        "findingFamily": "storage",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:1:1",
+        "sink": "localstorage",
+        "storageKeyToken": "token",
+        "storageKind": "localStorage"
+      }
+    },
+    {
+      "category": "static",
+      "type": "BROWSER_STORAGE_USAGE",
+      "subtype": "storage",
+      "severity": "MEDIUM",
+      "title": "Static storage finding: INSECURE_STORAGE",
+      "description": "Sensitive value stored in sessionStorage under key \"jwt\"",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:2:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts",
+      "ruleId": "INSECURE_STORAGE",
+      "line": 2,
+      "column": 0,
+      "sink": "sessionstorage",
+      "storageKey": "jwt",
+      "storageKind": "sessionStorage",
+      "correlationSignals": {
+        "findingFamily": "storage",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:2:1",
+        "sink": "sessionstorage",
+        "storageKeyToken": "jwt",
+        "storageKind": "sessionStorage"
+      }
+    },
+    {
+      "category": "static",
+      "type": "SCRIPT_REFERENCE",
+      "subtype": "script",
+      "severity": "MEDIUM",
+      "title": "Static script finding: THIRD_PARTY_SCRIPT",
+      "description": "Dynamically loads remote script from \"https://cdn.example.com/library.js\"",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:2:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts",
+      "ruleId": "THIRD_PARTY_SCRIPT",
+      "line": 2,
+      "column": 0,
+      "sink": "scriptsrcassignment",
+      "resourceUrl": "cdn.example.com/library.js",
+      "correlationSignals": {
+        "findingFamily": "script",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:2:1",
+        "sink": "scriptsrcassignment",
+        "resourceToken": "cdn.example.com/library.js"
+      }
+    },
+    {
+      "category": "static",
+      "type": "SCRIPT_REFERENCE",
+      "subtype": "script",
+      "severity": "MEDIUM",
+      "title": "Static script finding: THIRD_PARTY_SCRIPT",
+      "description": "Dynamically sets remote script source \"https://evil.example.com/payload.js\"",
+      "source": "static",
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:5:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts",
+      "ruleId": "THIRD_PARTY_SCRIPT",
+      "line": 5,
+      "column": 0,
+      "sink": "scriptsrcassignment",
+      "resourceUrl": "evil.example.com/payload.js",
+      "correlationSignals": {
+        "findingFamily": "script",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:5:1",
+        "sink": "scriptsrcassignment",
+        "resourceToken": "evil.example.com/payload.js"
+      }
+    }
+  ]
+}

@@ -57,6 +57,25 @@ function isStorageTarget(callee: t.Node): boolean {
   );
 }
 
+function getStorageKind(callee: t.Node): string | null {
+  if (!t.isMemberExpression(callee)) return null;
+
+  const fullName = memberExpressionToString(callee);
+
+  switch (fullName) {
+    case "localStorage.setItem":
+    case "window.localStorage.setItem":
+      return "localStorage";
+
+    case "sessionStorage.setItem":
+    case "window.sessionStorage.setItem":
+      return "sessionStorage";
+
+    default:
+      return null;
+  }
+}
+
 function getStringKey(node: t.Node | null | undefined): string | null {
   if (!node) return null;
 
@@ -92,6 +111,9 @@ export const storageRule: Rule = {
         const key = getStringKey(keyArg);
         if (!key) return;
 
+        const storageKind = getStorageKind(callee);
+        if (!storageKind) return;
+
         const normalizedKey = key.trim().toLowerCase();
 
         if (SENSITIVE_STORAGE_KEYS.has(normalizedKey)) {
@@ -99,9 +121,11 @@ export const storageRule: Rule = {
             createFinding({
               ruleId: "INSECURE_STORAGE",
               severity: "MEDIUM",
-              message: `Sensitive value stored in browser storage under key "${key}"`,
+              message: `Sensitive value stored in ${storageKind} under key "${key}"`,
               filePath: context.filePath,
               node: path.node,
+              storageKey: key,
+              storageKind,
             }),
           );
         }
