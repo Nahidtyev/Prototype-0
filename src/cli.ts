@@ -11,10 +11,18 @@ import { domXssRule } from "./static/rules/domXss.js";
 import { storageRule } from "./static/rules/storage.js";
 import { thirdPartyScriptsRule } from "./static/rules/thirdPartyScripts.js";
 import { isJavaScriptLikeFile } from "./static/utils/urls.js";
-import { runDynamicScan } from './dynamic/scanner/dynamicScanner.js';
+import {
+  DynamicScanTargetUnreachableError,
+  runDynamicScan,
+} from './dynamic/scanner/dynamicScanner.js';
 
 async function main() {
   const [, , firstArg, ...remainingArgs] = process.argv;
+
+  if (firstArg === "dynamic") {
+    process.exitCode = await handleDynamicCommand(remainingArgs);
+    return;
+  }
 
   if (firstArg === "correlate") {
     process.exitCode = await handleCorrelationCommand(remainingArgs);
@@ -77,33 +85,45 @@ async function main() {
   printFindings(allFindings);
 }
 
-const args = process.argv.slice(2);
-const command = args[0];
-
-if (command === 'dynamic') {
-  const url = getArgValue(args, '--url');
-  const outputPath = getArgValue(args, '--output');
-  const includeRawEvents = args.includes('--include-raw');
-  const headless = !args.includes('--headed');
+async function handleDynamicCommand(args: readonly string[]): Promise<number> {
+  const commandArgs = args[0] === 'scan' ? args.slice(1) : args;
+  const url = getArgValue(commandArgs, '--url');
+  const outputPath = getArgValue(commandArgs, '--output');
+  const includeRawEvents = commandArgs.includes('--include-raw');
+  const headless = !commandArgs.includes('--headed');
 
   if (!url) {
     console.error(
-      'Usage: node dist/cli.js dynamic --url http://localhost:3000 [--output artifacts/dynamic-report.json] [--include-raw] [--headed]',
+      'Usage: node dist/cli.js dynamic scan --url http://localhost:3000 [--output artifacts/dynamic-report.json] [--include-raw] [--headed]',
     );
-    process.exit(1);
+    return 1;
   }
 
-  const result = await runDynamicScan({
-    url,
-    headless,
-    outputPath,
-    includeRawEvents,
-  });
+  try {
+    const result = await runDynamicScan({
+      url,
+      headless,
+      outputPath,
+      includeRawEvents,
+    });
 
-  console.log(JSON.stringify(result, null, 2));
-  process.exit(0);
+    console.log(JSON.stringify(result, null, 2));
+    return 0;
+  } catch (error) {
+    if (error instanceof DynamicScanTargetUnreachableError) {
+      console.error(error.message);
+      const detail = error.originalMessage.split(/\r?\n/, 1)[0] ?? '';
+      if (detail.length > 0) {
+        console.error(`Details: ${detail}`);
+      }
+      return 1;
+    }
+
+    throw error;
+  }
 }
-function getArgValue(args: string[], flag: string): string | undefined {
+
+function getArgValue(args: readonly string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
   if (index === -1) {
     return undefined;

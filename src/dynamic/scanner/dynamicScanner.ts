@@ -28,6 +28,20 @@ type RuntimeBindingSource = {
   };
 };
 
+export class DynamicScanTargetUnreachableError extends Error {
+  readonly targetUrl: string;
+  readonly originalMessage: string;
+
+  constructor(targetUrl: string, originalMessage: string) {
+    super(
+      `Dynamic scan could not reach ${formatTargetUrl(targetUrl)}. Make sure the target app is running.`,
+    );
+    this.name = 'DynamicScanTargetUnreachableError';
+    this.targetUrl = targetUrl;
+    this.originalMessage = originalMessage;
+  }
+}
+
 export async function runDynamicScan(
   options: DynamicScanOptions,
 ): Promise<DynamicScanResult> {
@@ -84,10 +98,20 @@ export async function runDynamicScan(
     const page = await context.newPage();
     attachRequestListener(page);
 
-    await page.goto(options.url, {
-      waitUntil: 'domcontentloaded',
-      timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    });
+    try {
+      await page.goto(options.url, {
+        waitUntil: 'domcontentloaded',
+        timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      });
+    } catch (error) {
+      if (isTargetUnreachableError(error)) {
+        const originalMessage =
+          error instanceof Error ? error.message : String(error);
+        throw new DynamicScanTargetUnreachableError(options.url, originalMessage);
+      }
+
+      throw error;
+    }
 
     await page.waitForTimeout(options.postLoadWaitMs ?? DEFAULT_POST_LOAD_WAIT_MS);
 
@@ -126,6 +150,33 @@ export async function runDynamicScan(
 
     await browser.close().catch(() => undefined);
   }
+}
+
+function formatTargetUrl(value: string): string {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return value;
+  }
+}
+
+function isTargetUnreachableError(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (!message.includes('page.goto')) {
+    return false;
+  }
+
+  return [
+    'ERR_CONNECTION_REFUSED',
+    'ERR_CONNECTION_TIMED_OUT',
+    'ERR_ADDRESS_UNREACHABLE',
+    'ERR_NAME_NOT_RESOLVED',
+    'ERR_INTERNET_DISCONNECTED',
+    'ECONNREFUSED',
+    'EHOSTUNREACH',
+  ].some((token) => message.includes(token));
 }
 
 function sanitizeRuntimeEvent(
