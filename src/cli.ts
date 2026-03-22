@@ -1,14 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { collectSourceFiles } from "./scanner/fileWalker.js";
-import { parseSource } from "./scanner/parser.js";
-import { printFindings } from "./scanner/report.js";
-import { runRules } from "./engine/ruleEngine.js";
-import type { Finding } from "./engine/findings.js";
-import { domXssRule } from "./rules/domXss.js";
-import { storageRule } from "./rules/storage.js";
-import { thirdPartyScriptsRule } from "./rules/thirdPartyScripts.js";
-import { isJavaScriptLikeFile } from "./utils/urls.js";
+import { collectSourceFiles } from "./static/scanner/fileWalker.js";
+import { parseSource } from "./static/scanner/parser.js";
+import { printFindings } from "./static/scanner/report.js";
+import { runRules } from "./static/engine/ruleEngine.js";
+import type { Finding } from "./static/engine/findings.js";
+import { domXssRule } from "./static/rules/domXss.js";
+import { storageRule } from "./static/rules/storage.js";
+import { thirdPartyScriptsRule } from "./static/rules/thirdPartyScripts.js";
+import { isJavaScriptLikeFile } from "./static/utils/urls.js";
 import { runDynamicScan } from './dynamic/scanner/dynamicScanner.js';
 async function main() {
   const targetPath = process.argv[2] ?? ".";
