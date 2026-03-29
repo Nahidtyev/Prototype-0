@@ -1,7 +1,7 @@
 {
   "metadata": {
     "correlationVersion": 1,
-    "generatedAt": "2026-03-22T17:02:57.562Z",
+    "generatedAt": "2026-03-27T19:51:30.542Z",
     "inputs": {
       "staticReportPath": "reports\\static-report.json",
       "dynamicReportPath": "reports\\dynamic-report.json"
