@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>HTML Inline Lab</title>
+    <script src="https://cdn.example.com/inline-lab.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="slice-target"></div>
+    <div id="trim-target"></div>
+    <div id="passthrough-target"></div>
+    <div id="concat-target"></div>
+    <div id="template-target"></div>
+
+    <script>
+      const payload = location.hash || '<img src=x onerror=alert(1)>';
+      document.getElementById('app').innerHTML = payload;
+
+      const slicedPayload = location.hash.slice(1);
+      document.getElementById('slice-target').innerHTML = slicedPayload;
+
+      const trimmedPayload = location.hash.trim();
+      document.getElementById('trim-target').innerHTML = trimmedPayload;
+
+      const passthroughSource = location.hash;
+      const forwardedPayload = passthroughSource;
+      document.getElementById('passthrough-target').innerHTML = forwardedPayload;
+
+      const wrappedPayload = '<b>' + forwardedPayload;
+      document.getElementById('concat-target').innerHTML = wrappedPayload;
+
+      document.getElementById('template-target').innerHTML = `${forwardedPayload}`;
+
+      localStorage.setItem('token', 'demo-token');
+    </script>
+
+    <script>
+      function brokenInlineScript( {
+        return 'unterminated';
+      }
+    </script>
+  </body>
+</html>

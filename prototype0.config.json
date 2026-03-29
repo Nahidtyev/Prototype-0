@@ -1,0 +1,45 @@
+{
+  "projectName": "Prototype-0",
+  "targets": {
+    "staticPaths": [
+      "test-apps"
+    ],
+    "dynamicUrl": "http://localhost:8080/"
+  },
+  "output": {
+    "directory": "reports",
+    "staticReport": "static-report.json",
+    "dynamicReport": "dynamic-report.json",
+    "correlatedReport": "correlated-report.json"
+  },
+  "staticAnalysis": {
+    "enabled": true,
+    "extensions": [
+      ".js",
+      ".jsx",
+      ".ts",
+      ".tsx",
+      ".html"
+    ],
+    "rules": {
+      "domXss": true,
+      "storage": true,
+      "thirdPartyScripts": true
+    }
+  },
+  "dynamicAnalysis": {
+    "enabled": true,
+    "browser": "chromium",
+    "headless": true,
+    "timeoutMs": 15000,
+    "waitAfterLoadMs": 1500,
+    "includeRawEvents": false
+  },
+  "correlation": {
+    "enabled": true,
+    "locationDistanceThreshold": 8
+  },
+  "reporting": {
+    "schemaVersion": "0.1.0"
+  }
+}

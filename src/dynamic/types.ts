@@ -1,9 +1,17 @@
+import type {
+  FindingLocation,
+  FindingSummary,
+  NormalizedFindingCore,
+} from '../reporting/schema.js';
+import { REPORT_SCHEMA_VERSION } from '../reporting/schema.js';
+
 export type DynamicCategory =
   | 'DOM_XSS'
   | 'INSECURE_STORAGE'
   | 'THIRD_PARTY_SCRIPT';
 
 export type DynamicSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
+export type DynamicBrowserName = 'chromium' | 'firefox' | 'webkit';
 
 export type DynamicRuleId =
   | 'DOM_SINK_USAGE'
@@ -97,14 +105,26 @@ export interface DynamicFinding {
 }
 
 export interface DynamicScanMetadata {
+  generatedAt: string;
+  toolName: 'Prototype-0';
+  target: string;
   startedAt: string;
   finishedAt: string;
   targetUrl: string;
-  browser: 'chromium';
+  browser: DynamicBrowserName;
+  findingCount: number;
+}
+
+export interface DynamicScanSummary extends FindingSummary {
+  rawRuntimeEventCount: number;
+  rawNetworkEventCount: number;
 }
 
 export interface DynamicScanResult {
+  schemaVersion: typeof REPORT_SCHEMA_VERSION;
+  reportType: 'dynamic';
   metadata: DynamicScanMetadata;
+  summary: DynamicScanSummary;
   findings: NormalizedFinding[];
   rawEvents?: {
     runtime: RawRuntimeEvent[];
@@ -114,6 +134,7 @@ export interface DynamicScanResult {
 
 export interface DynamicScanOptions {
   url: string;
+  browserName?: DynamicBrowserName | undefined;
   headless?: boolean | undefined;
   timeoutMs?: number | undefined;
   postLoadWaitMs?: number | undefined;
@@ -148,7 +169,7 @@ export type CorrelationSignals = {
   resourceToken?: string;
 };
 
-export interface NormalizedFinding {
+export interface NormalizedFinding extends NormalizedFindingCore {
   type:
     | "DOM_SINK_USAGE"
     | "BROWSER_STORAGE_WRITE"
@@ -162,6 +183,7 @@ export interface NormalizedFinding {
   description: string;
   source: "runtime" | "network";
   timestamp?: string;
+  location?: FindingLocation | undefined;
   locationHint: string;
   correlationFingerprint: string;
   correlationSignals?: CorrelationSignals;

@@ -14,6 +14,8 @@ type VisitorPath<TNode extends t.Node> = Parameters<TraverseVisitors[string]>[0]
   node: TNode;
 };
 
+const TAINT_PRESERVING_STRING_METHODS = new Set(["slice", "substring", "trim"]);
+
 function getMemberPropertyName(node: t.MemberExpression): string | null {
   if (!node.computed && t.isIdentifier(node.property)) {
     return node.property.name;
@@ -53,6 +55,22 @@ function isSourceMemberExpression(node: t.Node): boolean {
   return text !== null && TAINT_SOURCES.has(text);
 }
 
+function isTaintPreservingCallExpression(
+  node: t.CallExpression,
+  taintedVars: Set<string>,
+): boolean {
+  if (!t.isMemberExpression(node.callee)) {
+    return false;
+  }
+
+  const propertyName = getMemberPropertyName(node.callee);
+  if (!propertyName || !TAINT_PRESERVING_STRING_METHODS.has(propertyName)) {
+    return false;
+  }
+
+  return isTainted(node.callee.object, taintedVars);
+}
+
 function isTainted(node: t.Node | null | undefined, taintedVars: Set<string>): boolean {
   if (!node) return false;
 
@@ -69,6 +87,10 @@ function isTainted(node: t.Node | null | undefined, taintedVars: Set<string>): b
   }
 
   if (t.isBinaryExpression(node)) {
+    if (node.operator !== "+") {
+      return false;
+    }
+
     return isTainted(node.left, taintedVars) || isTainted(node.right, taintedVars);
   }
 
@@ -85,10 +107,7 @@ function isTainted(node: t.Node | null | undefined, taintedVars: Set<string>): b
   }
 
   if (t.isCallExpression(node)) {
-    return node.arguments.some((arg) => {
-      if (t.isSpreadElement(arg) || t.isArgumentPlaceholder(arg)) return false;
-      return isTainted(arg, taintedVars);
-    });
+    return isTaintPreservingCallExpression(node, taintedVars);
   }
 
   return false;

@@ -1,10 +1,20 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type {
+  FindingLocation,
+  FindingSummary,
+  NormalizedFindingCore,
+} from "../../reporting/schema.js";
+import {
+  REPORT_SCHEMA_VERSION,
+  REPORT_TOOL_NAME,
+} from "../../reporting/schema.js";
+import { buildFindingSummary } from "../../reporting/summary.js";
 import type { Finding } from "../engine/findings.js";
 
 type StaticSubtype = "dom" | "storage" | "script" | "unknown";
 
-interface StaticReportFinding {
+interface StaticReportFinding extends NormalizedFindingCore {
   category: "static";
   type: string;
   subtype: StaticSubtype;
@@ -12,11 +22,14 @@ interface StaticReportFinding {
   title: string;
   description: string;
   source: "static";
+  location?: FindingLocation | undefined;
   locationHint: string;
   filePath: string;
   line?: number;
   column?: number;
   ruleId: string;
+  inlineScriptBlockIndex?: number;
+  evidence?: Record<string, unknown> | undefined;
   sink?: string;
   storageKey?: string;
   storageKind?: string;
@@ -32,12 +45,17 @@ interface StaticReportFinding {
 }
 
 interface StaticJsonReport {
+  schemaVersion: typeof REPORT_SCHEMA_VERSION;
+  reportType: "static";
   metadata: {
-    mode: "static";
     generatedAt: string;
+    toolName: typeof REPORT_TOOL_NAME;
+    target: string;
+    mode: "static";
     targetPath: string;
     findingCount: number;
   };
+  summary: FindingSummary;
   findings: StaticReportFinding[];
 }
 
@@ -47,6 +65,34 @@ function buildLocationHint(finding: Finding): string {
   }
 
   return finding.filePath;
+}
+
+function getInlineScriptBlockIndex(finding: Finding): number | undefined {
+  return typeof finding.inlineScriptBlockIndex === "number"
+    ? finding.inlineScriptBlockIndex
+    : undefined;
+}
+
+function buildLocation(finding: Finding): FindingLocation {
+  const location: FindingLocation = {
+    path: finding.filePath,
+    hint: buildLocationHint(finding),
+  };
+
+  if (finding.line !== undefined) {
+    location.line = finding.line;
+  }
+
+  if (finding.column !== undefined) {
+    location.column = finding.column + 1;
+  }
+
+  const inlineScriptBlockIndex = getInlineScriptBlockIndex(finding);
+  if (inlineScriptBlockIndex !== undefined) {
+    location.inlineScriptBlockIndex = inlineScriptBlockIndex;
+  }
+
+  return location;
 }
 
 function detectSubtype(finding: Finding): StaticSubtype {
@@ -180,6 +226,8 @@ function buildTitle(finding: Finding, subtype: StaticSubtype): string {
 function toStaticReportFinding(finding: Finding): StaticReportFinding {
   const subtype = detectSubtype(finding);
   const locationHint = buildLocationHint(finding);
+  const location = buildLocation(finding);
+  const inlineScriptBlockIndex = getInlineScriptBlockIndex(finding);
   const sink = extractSink(finding.message);
   const storageKey =
     subtype === "storage"
@@ -201,9 +249,20 @@ function toStaticReportFinding(finding: Finding): StaticReportFinding {
     title: buildTitle(finding, subtype),
     description: finding.message,
     source: "static",
+    location,
     locationHint,
     filePath: finding.filePath,
     ruleId: finding.ruleId,
+    evidence: {
+      ruleId: finding.ruleId,
+      ...(inlineScriptBlockIndex !== undefined
+        ? { inlineScriptBlockIndex }
+        : {}),
+      ...(sink !== undefined ? { sink } : {}),
+      ...(storageKey !== undefined ? { storageKey } : {}),
+      ...(storageKind !== undefined ? { storageKind } : {}),
+      ...(resourceUrl !== undefined ? { resourceUrl } : {}),
+    },
   };
 
   if (finding.line !== undefined) {
@@ -228,6 +287,10 @@ function toStaticReportFinding(finding: Finding): StaticReportFinding {
 
   if (resourceUrl !== undefined) {
     reportFinding.resourceUrl = resourceUrl;
+  }
+
+  if (inlineScriptBlockIndex !== undefined) {
+    reportFinding.inlineScriptBlockIndex = inlineScriptBlockIndex;
   }
 
   const correlationSignals: StaticReportFinding["correlationSignals"] = {
@@ -261,14 +324,20 @@ export async function writeStaticJsonReport(
   targetPath: string,
   outputPath: string,
 ): Promise<void> {
+  const normalizedFindings = findings.map(toStaticReportFinding);
   const report: StaticJsonReport = {
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    reportType: "static",
     metadata: {
-      mode: "static",
       generatedAt: new Date().toISOString(),
+      toolName: REPORT_TOOL_NAME,
+      target: targetPath,
+      mode: "static",
       targetPath,
-      findingCount: findings.length,
+      findingCount: normalizedFindings.length,
     },
-    findings: findings.map(toStaticReportFinding),
+    summary: buildFindingSummary(normalizedFindings),
+    findings: normalizedFindings,
   };
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true });

@@ -3,6 +3,7 @@ import type {
   NormalizedFinding,
   RuntimeLocation,
 } from "../types.js";
+import type { FindingLocation } from "../../reporting/schema.js";
 
 type NormalizerRuntimeEvent = {
   type: string;
@@ -283,6 +284,42 @@ function buildLocationHint(location?: RuntimeLocation): string {
   return "unknown";
 }
 
+function buildLocation(location?: RuntimeLocation): FindingLocation | undefined {
+  const frame = selectMeaningfulApplicationFrame(location);
+  const hint = buildLocationHint(location);
+  const normalized: FindingLocation = {};
+
+  if (hint !== "unknown") {
+    normalized.hint = hint;
+  }
+
+  if (frame?.url) {
+    normalized.path = shortenLocationUrl(frame.url);
+  }
+
+  if (frame?.line !== undefined) {
+    normalized.line = frame.line;
+  }
+
+  if (frame?.column !== undefined) {
+    normalized.column = frame.column;
+  }
+
+  if (frame?.functionName) {
+    normalized.functionName = frame.functionName;
+  }
+
+  if (location?.pageUrl) {
+    normalized.pageUrl = location.pageUrl;
+  }
+
+  if (location?.frameUrl) {
+    normalized.frameUrl = location.frameUrl;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 function buildLocationToken(location?: RuntimeLocation): string {
   const frame = selectMeaningfulApplicationFrame(location);
 
@@ -447,6 +484,7 @@ function makeBaseFinding(
     "type" | "subtype" | "severity" | "title" | "description" | "source"
   > & {
     timestamp?: string | undefined;
+    location?: FindingLocation | undefined;
     locationHint: string;
     correlationFingerprint: string;
     correlationSignals: CorrelationSignals;
@@ -461,6 +499,7 @@ function makeBaseFinding(
     description,
     source,
     timestamp,
+    location,
     locationHint,
     correlationFingerprint,
     correlationSignals,
@@ -476,6 +515,7 @@ function makeBaseFinding(
     description,
     source,
     ...(timestamp !== undefined ? { timestamp } : {}),
+    ...(location !== undefined ? { location } : {}),
     locationHint,
     correlationFingerprint,
     correlationSignals,
@@ -484,6 +524,7 @@ function makeBaseFinding(
 }
 
 function buildDomFinding(event: NormalizerRuntimeEvent, sinkName: string): NormalizedFinding {
+  const location = buildLocation(event.location);
   const locationHint = buildLocationHint(event.location);
   const locationToken = buildLocationToken(event.location);
   const sinkToken = normalizeIdentifier(sinkName);
@@ -496,6 +537,7 @@ function buildDomFinding(event: NormalizerRuntimeEvent, sinkName: string): Norma
     description: `Runtime evidence shows usage of the DOM sink "${sinkName}".`,
     source: "runtime",
     timestamp: event.timestamp,
+    location,
     locationHint,
     correlationFingerprint: buildCorrelationFingerprint([
       "dynamic",
@@ -522,6 +564,7 @@ function buildStorageFinding(
   api: "localStorage" | "sessionStorage",
   rawKey?: string,
 ): NormalizedFinding {
+  const location = buildLocation(event.location);
   const locationHint = buildLocationHint(event.location);
   const locationToken = buildLocationToken(event.location);
   const apiToken = normalizeIdentifier(api);
@@ -535,6 +578,7 @@ function buildStorageFinding(
     description: `Runtime evidence shows a write to ${api}.setItem.`,
     source: "runtime",
     timestamp: event.timestamp,
+    location,
     locationHint,
     correlationFingerprint: buildCorrelationFingerprint([
       "dynamic",
@@ -560,6 +604,7 @@ function buildStorageFinding(
 }
 
 function buildScriptCreationFinding(event: NormalizerRuntimeEvent): NormalizedFinding {
+  const location = buildLocation(event.location);
   const locationHint = buildLocationHint(event.location);
   const locationToken = buildLocationToken(event.location);
 
@@ -572,6 +617,7 @@ function buildScriptCreationFinding(event: NormalizerRuntimeEvent): NormalizedFi
       "Runtime evidence shows dynamic creation or insertion of a <script> element.",
     source: "runtime",
     timestamp: event.timestamp,
+    location,
     locationHint,
     correlationFingerprint: buildCorrelationFingerprint([
       "dynamic",
@@ -593,6 +639,7 @@ function buildScriptCreationFinding(event: NormalizerRuntimeEvent): NormalizedFi
 }
 
 function buildScriptSrcAssignmentFinding(event: NormalizerRuntimeEvent): NormalizedFinding {
+  const location = buildLocation(event.location);
   const locationHint = buildLocationHint(event.location);
   const locationToken = buildLocationToken(event.location);
   const rawUrl = getEventUrl(event);
@@ -607,6 +654,7 @@ function buildScriptSrcAssignmentFinding(event: NormalizerRuntimeEvent): Normali
       "Runtime evidence shows assignment of a script source URL through src or setAttribute('src', ...).",
     source: "runtime",
     timestamp: event.timestamp,
+    location,
     locationHint,
     correlationFingerprint: buildCorrelationFingerprint([
       "dynamic",
@@ -631,6 +679,7 @@ function buildScriptSrcAssignmentFinding(event: NormalizerRuntimeEvent): Normali
 }
 
 function buildExternalScriptLoadFinding(event: NormalizerNetworkEvent): NormalizedFinding {
+  const location = buildLocation(event.location);
   const locationHint = buildLocationHint(event.location);
   const locationToken = buildLocationToken(event.location);
   const rawUrl = getEventUrl(event);
@@ -645,6 +694,7 @@ function buildExternalScriptLoadFinding(event: NormalizerNetworkEvent): Normaliz
       "Network evidence shows an external script resource being requested at runtime.",
     source: "network",
     timestamp: event.timestamp,
+    location,
     locationHint,
     correlationFingerprint: buildCorrelationFingerprint([
       "dynamic",

@@ -1,7 +1,7 @@
 import traverseImport from "@babel/traverse";
 import * as t from "@babel/types";
 import { createFinding, type Finding, type Rule } from "../engine/findings.js";
-import { isHtmlFile, isJavaScriptLikeFile, isRemoteUrl } from "../utils/urls.js";
+import { isHtmlFile, isRemoteUrl } from "../utils/urls.js";
 
 const traverse: typeof traverseImport =
   typeof traverseImport === "function"
@@ -198,7 +198,7 @@ export const thirdPartyScriptsRule: Rule = {
   id: "THIRD_PARTY_SCRIPT",
   description: "Detects risky third-party script loading patterns",
   run(context) {
-    if (isJavaScriptLikeFile(context.filePath)) {
+    if (context.ast) {
       return createJsFindings(context);
     }
 

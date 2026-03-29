@@ -1,15 +1,22 @@
 import {
-  chromium,
+  type Browser,
   type BrowserContext,
+  type BrowserType,
   type Page,
   type Request,
 } from 'playwright';
 
 import { installRuntimeHooks } from '../instrumentation/runtimeHooks.js';
 import { installStorageHooks } from '../instrumentation/storageHooks.js';
+import {
+  REPORT_SCHEMA_VERSION,
+  REPORT_TOOL_NAME,
+} from '../../reporting/schema.js';
+import { buildFindingSummary } from '../../reporting/summary.js';
 import { writeDynamicJsonReport } from '../reporters/jsonReporter.js';
 import { normalizeDynamicEvents } from './normalizer.js';
 import type {
+  DynamicBrowserName,
   DynamicScanOptions,
   DynamicScanResult,
   RawNetworkEvent,
@@ -42,20 +49,44 @@ export class DynamicScanTargetUnreachableError extends Error {
   }
 }
 
+export class DynamicScanSetupError extends Error {
+  readonly originalMessage: string | undefined;
+
+  constructor(message: string, originalMessage?: string) {
+    super(message);
+    this.name = 'DynamicScanSetupError';
+    this.originalMessage = originalMessage;
+  }
+}
+
 export async function runDynamicScan(
   options: DynamicScanOptions,
 ): Promise<DynamicScanResult> {
   const startedAt = new Date().toISOString();
   const runtimeEvents: RawRuntimeEvent[] = [];
   const networkEvents: RawNetworkEvent[] = [];
+  const browserName = options.browserName ?? 'chromium';
 
-  const browser = await chromium.launch({
-    headless: options.headless ?? true,
-  });
-
+  let browser: Browser | undefined;
   let context: BrowserContext | undefined;
 
   try {
+    const browserType = await loadBrowserType(browserName);
+
+    try {
+      browser = await browserType.launch({
+        headless: options.headless ?? true,
+      });
+    } catch (error) {
+      throw toBrowserLaunchError(browserName, error);
+    }
+
+    if (!browser) {
+      throw new DynamicScanSetupError(
+        `Failed to launch the ${browserName} browser for dynamic scanning.`,
+      );
+    }
+
     context = await browser.newContext();
 
     await context.exposeBinding(
@@ -121,14 +152,26 @@ export async function runDynamicScan(
     });
 
     const finishedAt = new Date().toISOString();
+    const summary = {
+      ...buildFindingSummary(findings),
+      rawRuntimeEventCount: runtimeEvents.length,
+      rawNetworkEventCount: networkEvents.length,
+    };
 
     const result: DynamicScanResult = {
+      schemaVersion: REPORT_SCHEMA_VERSION,
+      reportType: 'dynamic',
       metadata: {
+        generatedAt: finishedAt,
+        toolName: REPORT_TOOL_NAME,
+        target: page.url(),
         startedAt,
         finishedAt,
         targetUrl: page.url(),
-        browser: 'chromium',
+        browser: browserName,
+        findingCount: findings.length,
       },
+      summary,
       findings,
       rawEvents: options.includeRawEvents
         ? {
@@ -148,8 +191,57 @@ export async function runDynamicScan(
       await context.close().catch(() => undefined);
     }
 
-    await browser.close().catch(() => undefined);
+    if (browser) {
+      await browser.close().catch(() => undefined);
+    }
   }
+}
+
+async function loadBrowserType(
+  browserName: DynamicBrowserName,
+): Promise<BrowserType<Browser>> {
+  let playwright: typeof import('playwright');
+
+  try {
+    playwright = await import('playwright');
+  } catch {
+    throw new DynamicScanSetupError(
+      'Playwright is not available. Run "npm install" to install project dependencies.',
+    );
+  }
+
+  const browserType = playwright[browserName];
+
+  if (!browserType || typeof browserType.launch !== 'function') {
+    throw new DynamicScanSetupError(
+      `Unsupported browser "${browserName}". Use chromium, firefox, or webkit.`,
+    );
+  }
+
+  return browserType;
+}
+
+function toBrowserLaunchError(
+  browserName: DynamicBrowserName,
+  error: unknown,
+): DynamicScanSetupError {
+  const originalMessage = error instanceof Error ? error.message : String(error);
+  const firstLine = originalMessage.split(/\r?\n/, 1)[0] ?? originalMessage;
+
+  if (
+    originalMessage.includes("Executable doesn't exist") ||
+    originalMessage.includes('browserType.launch')
+  ) {
+    return new DynamicScanSetupError(
+      `Playwright browser "${browserName}" is not installed or not available. Run "npx playwright install ${browserName}" and try again.`,
+      firstLine,
+    );
+  }
+
+  return new DynamicScanSetupError(
+    `Failed to launch the ${browserName} browser for dynamic scanning.`,
+    firstLine,
+  );
 }
 
 function formatTargetUrl(value: string): string {

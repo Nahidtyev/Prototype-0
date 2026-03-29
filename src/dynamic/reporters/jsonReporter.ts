@@ -8,5 +8,5 @@ export async function writeDynamicJsonReport(
   outputPath: string,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, JSON.stringify(result, null, 2), 'utf8');
+  await writeFile(outputPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 }

@@ -1,9 +1,26 @@
 {
+  "schemaVersion": "0.2.0",
+  "reportType": "static",
   "metadata": {
+    "generatedAt": "2026-03-29T21:25:29.482Z",
+    "toolName": "Prototype-0",
+    "target": "C:\\Users\\nahid\\Downloads\\Master Thesis\\Prototype-0\\test-apps",
     "mode": "static",
-    "generatedAt": "2026-03-27T19:51:24.233Z",
     "targetPath": "C:\\Users\\nahid\\Downloads\\Master Thesis\\Prototype-0\\test-apps",
-    "findingCount": 8
+    "findingCount": 20
+  },
+  "summary": {
+    "totalFindings": 20,
+    "findingsBySeverity": {
+      "LOW": 1,
+      "MEDIUM": 9,
+      "HIGH": 10
+    },
+    "findingsByType": {
+      "DOM_SINK_POTENTIAL": 10,
+      "BROWSER_STORAGE_USAGE": 4,
+      "SCRIPT_REFERENCE": 6
+    }
   },
   "findings": [
     {
@@ -14,9 +31,427 @@
       "title": "Static DOM finding: DOM_XSS",
       "description": "Tainted data flows into innerHTML",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:17:9",
+        "line": 17,
+        "column": 9,
+        "inlineScriptBlockIndex": 1
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:17:9",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 1,
+        "sink": "innerhtml"
+      },
+      "line": 17,
+      "column": 8,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 1,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:17:9",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "BROWSER_STORAGE_USAGE",
+      "subtype": "storage",
+      "severity": "MEDIUM",
+      "title": "Static storage finding: INSECURE_STORAGE",
+      "description": "Sensitive value stored in localStorage under key \"token\"",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:20:7",
+        "line": 20,
+        "column": 7,
+        "inlineScriptBlockIndex": 1
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:20:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html",
+      "ruleId": "INSECURE_STORAGE",
+      "evidence": {
+        "ruleId": "INSECURE_STORAGE",
+        "inlineScriptBlockIndex": 1,
+        "sink": "localstorage",
+        "storageKey": "token",
+        "storageKind": "localStorage"
+      },
+      "line": 20,
+      "column": 6,
+      "sink": "localstorage",
+      "storageKey": "token",
+      "storageKind": "localStorage",
+      "inlineScriptBlockIndex": 1,
+      "correlationSignals": {
+        "findingFamily": "storage",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:20:7",
+        "sink": "localstorage",
+        "storageKeyToken": "token",
+        "storageKind": "localStorage"
+      }
+    },
+    {
+      "category": "static",
+      "type": "SCRIPT_REFERENCE",
+      "subtype": "script",
+      "severity": "MEDIUM",
+      "title": "Static script finding: THIRD_PARTY_SCRIPT",
+      "description": "Dynamically loads remote script from \"https://cdn.example.com/demo-widget.js\"",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:23:7",
+        "line": 23,
+        "column": 7,
+        "inlineScriptBlockIndex": 1
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:23:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html",
+      "ruleId": "THIRD_PARTY_SCRIPT",
+      "evidence": {
+        "ruleId": "THIRD_PARTY_SCRIPT",
+        "inlineScriptBlockIndex": 1,
+        "sink": "scriptsrcassignment",
+        "resourceUrl": "cdn.example.com/demo-widget.js"
+      },
+      "line": 23,
+      "column": 6,
+      "sink": "scriptsrcassignment",
+      "resourceUrl": "cdn.example.com/demo-widget.js",
+      "inlineScriptBlockIndex": 1,
+      "correlationSignals": {
+        "findingFamily": "script",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/dynamic-lab/index.html:23:7",
+        "sink": "scriptsrcassignment",
+        "resourceToken": "cdn.example.com/demo-widget.js"
+      }
+    },
+    {
+      "category": "static",
+      "type": "SCRIPT_REFERENCE",
+      "subtype": "script",
+      "severity": "MEDIUM",
+      "title": "Static script finding: THIRD_PARTY_SCRIPT",
+      "description": "External script \"https://cdn.example.com/inline-lab.js\" is missing integrity attribute",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:6:1",
+        "line": 6,
+        "column": 1
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:6:1",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "THIRD_PARTY_SCRIPT",
+      "evidence": {
+        "ruleId": "THIRD_PARTY_SCRIPT",
+        "sink": "scriptsrcassignment",
+        "resourceUrl": "cdn.example.com/inline-lab.js"
+      },
+      "line": 6,
+      "column": 0,
+      "sink": "scriptsrcassignment",
+      "resourceUrl": "cdn.example.com/inline-lab.js",
+      "correlationSignals": {
+        "findingFamily": "script",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:6:1",
+        "sink": "scriptsrcassignment",
+        "resourceToken": "cdn.example.com/inline-lab.js"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:18:7",
+        "line": 18,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:18:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 2,
+        "sink": "innerhtml"
+      },
+      "line": 18,
+      "column": 6,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:18:7",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:21:7",
+        "line": 21,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:21:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 2,
+        "sink": "innerhtml"
+      },
+      "line": 21,
+      "column": 6,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:21:7",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:24:7",
+        "line": 24,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:24:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 2,
+        "sink": "innerhtml"
+      },
+      "line": 24,
+      "column": 6,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:24:7",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:28:7",
+        "line": 28,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:28:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 2,
+        "sink": "innerhtml"
+      },
+      "line": 28,
+      "column": 6,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:28:7",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:31:7",
+        "line": 31,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:31:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 2,
+        "sink": "innerhtml"
+      },
+      "line": 31,
+      "column": 6,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:31:7",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:33:7",
+        "line": 33,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:33:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "inlineScriptBlockIndex": 2,
+        "sink": "innerhtml"
+      },
+      "line": 33,
+      "column": 6,
+      "sink": "innerhtml",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "dom",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:33:7",
+        "sink": "innerhtml"
+      }
+    },
+    {
+      "category": "static",
+      "type": "BROWSER_STORAGE_USAGE",
+      "subtype": "storage",
+      "severity": "MEDIUM",
+      "title": "Static storage finding: INSECURE_STORAGE",
+      "description": "Sensitive value stored in localStorage under key \"token\"",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:35:7",
+        "line": 35,
+        "column": 7,
+        "inlineScriptBlockIndex": 2
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:35:7",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "INSECURE_STORAGE",
+      "evidence": {
+        "ruleId": "INSECURE_STORAGE",
+        "inlineScriptBlockIndex": 2,
+        "sink": "localstorage",
+        "storageKey": "token",
+        "storageKind": "localStorage"
+      },
+      "line": 35,
+      "column": 6,
+      "sink": "localstorage",
+      "storageKey": "token",
+      "storageKind": "localStorage",
+      "inlineScriptBlockIndex": 2,
+      "correlationSignals": {
+        "findingFamily": "storage",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:35:7",
+        "sink": "localstorage",
+        "storageKeyToken": "token",
+        "storageKind": "localStorage"
+      }
+    },
+    {
+      "category": "static",
+      "type": "SCRIPT_REFERENCE",
+      "subtype": "script",
+      "severity": "LOW",
+      "title": "Static script finding: PARSER_ERROR",
+      "description": "Inline script block #3 parse error: Unexpected keyword 'return'. (40:8)",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:38:13",
+        "line": 38,
+        "column": 13,
+        "inlineScriptBlockIndex": 3
+      },
+      "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:38:13",
+      "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html",
+      "ruleId": "PARSER_ERROR",
+      "evidence": {
+        "ruleId": "PARSER_ERROR",
+        "inlineScriptBlockIndex": 3
+      },
+      "line": 38,
+      "column": 12,
+      "inlineScriptBlockIndex": 3,
+      "correlationSignals": {
+        "findingFamily": "script",
+        "locationToken": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/html-inline-lab/index.html:38:13"
+      }
+    },
+    {
+      "category": "static",
+      "type": "DOM_SINK_POTENTIAL",
+      "subtype": "dom",
+      "severity": "HIGH",
+      "title": "Static DOM finding: DOM_XSS",
+      "description": "Tainted data flows into innerHTML",
+      "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:4:1",
+        "line": 4,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:4:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
       "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "sink": "innerhtml"
+      },
       "line": 4,
       "column": 0,
       "sink": "innerhtml",
@@ -34,9 +469,19 @@
       "title": "Static DOM finding: DOM_XSS",
       "description": "Tainted data reaches dangerous call document.write",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:6:1",
+        "line": 6,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:6:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
       "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "sink": "documentwrite"
+      },
       "line": 6,
       "column": 0,
       "sink": "documentwrite",
@@ -54,9 +499,19 @@
       "title": "Static DOM finding: DOM_XSS",
       "description": "Tainted data reaches eval",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:9:1",
+        "line": 9,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx:9:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/App.tsx",
       "ruleId": "DOM_XSS",
+      "evidence": {
+        "ruleId": "DOM_XSS",
+        "sink": "eval"
+      },
       "line": 9,
       "column": 0,
       "sink": "eval",
@@ -74,9 +529,20 @@
       "title": "Static script finding: THIRD_PARTY_SCRIPT",
       "description": "External script \"https://cdn.jsdelivr.net/npm/example-lib@1.0.0/dist/lib.min.js\" is missing integrity attribute",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html:4:1",
+        "line": 4,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html:4:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/index.html",
       "ruleId": "THIRD_PARTY_SCRIPT",
+      "evidence": {
+        "ruleId": "THIRD_PARTY_SCRIPT",
+        "sink": "scriptsrcassignment",
+        "resourceUrl": "cdn.jsdelivr.net/npm/example-lib@1.0.0/dist/lib.min.js"
+      },
       "line": 4,
       "column": 0,
       "sink": "scriptsrcassignment",
@@ -96,9 +562,21 @@
       "title": "Static storage finding: INSECURE_STORAGE",
       "description": "Sensitive value stored in localStorage under key \"token\"",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:1:1",
+        "line": 1,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:1:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts",
       "ruleId": "INSECURE_STORAGE",
+      "evidence": {
+        "ruleId": "INSECURE_STORAGE",
+        "sink": "localstorage",
+        "storageKey": "token",
+        "storageKind": "localStorage"
+      },
       "line": 1,
       "column": 0,
       "sink": "localstorage",
@@ -120,9 +598,21 @@
       "title": "Static storage finding: INSECURE_STORAGE",
       "description": "Sensitive value stored in sessionStorage under key \"jwt\"",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:2:1",
+        "line": 2,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts:2:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/storage.ts",
       "ruleId": "INSECURE_STORAGE",
+      "evidence": {
+        "ruleId": "INSECURE_STORAGE",
+        "sink": "sessionstorage",
+        "storageKey": "jwt",
+        "storageKind": "sessionStorage"
+      },
       "line": 2,
       "column": 0,
       "sink": "sessionstorage",
@@ -144,9 +634,20 @@
       "title": "Static script finding: THIRD_PARTY_SCRIPT",
       "description": "Dynamically loads remote script from \"https://cdn.example.com/library.js\"",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:2:1",
+        "line": 2,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:2:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts",
       "ruleId": "THIRD_PARTY_SCRIPT",
+      "evidence": {
+        "ruleId": "THIRD_PARTY_SCRIPT",
+        "sink": "scriptsrcassignment",
+        "resourceUrl": "cdn.example.com/library.js"
+      },
       "line": 2,
       "column": 0,
       "sink": "scriptsrcassignment",
@@ -166,9 +667,20 @@
       "title": "Static script finding: THIRD_PARTY_SCRIPT",
       "description": "Dynamically sets remote script source \"https://evil.example.com/payload.js\"",
       "source": "static",
+      "location": {
+        "path": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts",
+        "hint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:5:1",
+        "line": 5,
+        "column": 1
+      },
       "locationHint": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts:5:1",
       "filePath": "C:/Users/nahid/Downloads/Master Thesis/Prototype-0/test-apps/vulnerable-react-app/thirdParty.ts",
       "ruleId": "THIRD_PARTY_SCRIPT",
+      "evidence": {
+        "ruleId": "THIRD_PARTY_SCRIPT",
+        "sink": "scriptsrcassignment",
+        "resourceUrl": "evil.example.com/payload.js"
+      },
       "line": 5,
       "column": 0,
       "sink": "scriptsrcassignment",

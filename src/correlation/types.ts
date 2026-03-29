@@ -1,6 +1,17 @@
+import type { ReportMetadata } from '../reporting/schema.js';
+import { REPORT_SCHEMA_VERSION } from '../reporting/schema.js';
+
+export const DEFAULT_LOCATION_DISTANCE_THRESHOLD = 8 as const;
+
 export type CorrelationScopeFamily = 'dom' | 'storage' | 'script';
 export type CorrelationFamily = CorrelationScopeFamily | 'unknown';
 export type CorrelationMode = 'static' | 'dynamic';
+
+export interface CorrelatorOptions {
+  staticReportPath?: string | undefined;
+  dynamicReportPath?: string | undefined;
+  locationDistanceThreshold?: number | undefined;
+}
 
 export interface ReportFinding {
   category?: string;
@@ -11,9 +22,11 @@ export interface ReportFinding {
   description?: string;
   source?: string;
   timestamp?: string;
-  location?: string;
+  location?: string | Record<string, unknown>;
   locationHint?: string;
   correlationFingerprint?: string;
+  correlationSignals?: Record<string, unknown>;
+  evidence?: Record<string, unknown>;
   sink?: string;
   storageKey?: string;
   storageKind?: string;
@@ -25,7 +38,10 @@ export interface ReportFinding {
 }
 
 export interface FindingReport {
+  schemaVersion?: string;
+  reportType?: string;
   metadata?: Record<string, unknown>;
+  summary?: Record<string, unknown>;
   findings: ReportFinding[];
   [key: string]: unknown;
 }
@@ -58,6 +74,15 @@ export interface CorroboratedFinding {
     staticLocation?: string;
     dynamicLocation?: string;
   };
+  matchSummary: {
+    matchedFamily: CorrelationScopeFamily;
+    matchedSignals: string[];
+    score: number;
+    matchKind: 'fingerprint' | 'signal';
+    locationDistance?: number | undefined;
+    locationThresholdUsed?: number | undefined;
+    reasoning: string;
+  };
   staticFinding: ReportFinding;
   dynamicFinding: ReportFinding;
 }
@@ -75,32 +100,38 @@ export interface UnmatchedFinding {
   finding: ReportFinding;
 }
 
+export interface CorrelationInputSummary {
+  reportType?: string | undefined;
+  schemaVersion?: string | undefined;
+  findingCount: number;
+  scopedCount: number;
+  ignoredCount: number;
+}
+
+export interface CorrelationReportSummary {
+  corroboratedCount: number;
+  corroboratedByFamily: Partial<Record<CorrelationScopeFamily, number>>;
+  staticOnlyCount: number;
+  dynamicOnlyCount: number;
+  ignoredStaticCount: number;
+  ignoredDynamicCount: number;
+}
+
 export interface CorrelatedReport {
-  metadata: {
-    correlationVersion: 1;
-    generatedAt: string;
+  schemaVersion: typeof REPORT_SCHEMA_VERSION;
+  reportType: 'correlation';
+  metadata: ReportMetadata & {
     inputs?: {
       staticReportPath?: string;
       dynamicReportPath?: string;
     };
-    staticReportSummary: {
-      findingCount: number;
-      scopedCount: number;
-      ignoredCount: number;
+    heuristics?: {
+      locationDistanceThreshold: number;
     };
-    dynamicReportSummary: {
-      findingCount: number;
-      scopedCount: number;
-      ignoredCount: number;
-    };
-    summary: {
-      corroboratedCount: number;
-      staticOnlyCount: number;
-      dynamicOnlyCount: number;
-      ignoredStaticCount: number;
-      ignoredDynamicCount: number;
-    };
+    staticReport: CorrelationInputSummary;
+    dynamicReport: CorrelationInputSummary;
   };
+  summary: CorrelationReportSummary;
   corroborated: CorroboratedFinding[];
   staticOnly: UnmatchedFinding[];
   dynamicOnly: UnmatchedFinding[];

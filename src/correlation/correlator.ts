@@ -1,7 +1,13 @@
+import {
+  REPORT_SCHEMA_VERSION,
+  REPORT_TOOL_NAME,
+} from '../reporting/schema.js';
 import type {
   CorrelatedReport,
+  CorrelationInputSummary,
   CorrelationFamily,
   CorrelationMode,
+  CorrelationReportSummary,
   CorrelationScopeFamily,
   CorroboratedFinding,
   FindingReport,
@@ -9,16 +15,16 @@ import type {
   ReportFinding,
   UnmatchedFinding,
 } from './types.js';
-
-interface CorrelateOptions {
-  staticReportPath?: string;
-  dynamicReportPath?: string;
-}
+import {
+  DEFAULT_LOCATION_DISTANCE_THRESHOLD,
+  type CorrelatorOptions,
+} from './types.js';
 
 interface CandidatePair {
   staticIndex: number;
   dynamicIndex: number;
   score: number;
+  locationDistance?: number;
 }
 
 const DOM_SINKS = [
@@ -39,14 +45,16 @@ const STORAGE_KINDS = [
   'cookie',
 ] as const;
 
-
-
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function normalizeToken(value: string | undefined): string | undefined {
@@ -342,10 +350,42 @@ function extractLocationToken(finding: ReportFinding): string | undefined {
   return (
     normalizeLocationToken(asString(finding.locationHint)) ??
     normalizeLocationToken(asString(finding.location)) ??
+    normalizeLocationToken(locationObjectToToken(finding.location)) ??
     normalizeLocationToken(asString(finding['file'])) ??
     normalizeLocationToken(asString(finding['filePath'])) ??
     normalizeLocationToken(asString(finding['path']))
   );
+}
+
+function locationObjectToToken(value: unknown): string | undefined {
+  const record = asRecord(value);
+
+  if (!record) {
+    return undefined;
+  }
+
+  const hint = asString(record.hint);
+  if (hint) {
+    return hint;
+  }
+
+  const path = asString(record.path);
+  const line = asNumber(record.line);
+  const column = asNumber(record.column);
+
+  if (!path) {
+    return undefined;
+  }
+
+  if (line !== undefined && column !== undefined) {
+    return `${path}:${line}:${column}`;
+  }
+
+  if (line !== undefined) {
+    return `${path}:${line}`;
+  }
+
+  return path;
 }
 
 function parseLocation(
@@ -355,7 +395,7 @@ function parseLocation(
     return {};
   }
 
-  const match = locationToken.match(/^(.*?)(?::(\d+))(?::(\d+))?$/);
+  const match = locationToken.match(/^(.*?)(?::(\d+))(?::(\d+))?(?:\s+::.*)?$/);
   if (!match) {
     return { path: locationToken };
   }
@@ -377,6 +417,22 @@ function parseLocation(
   return result;
 }
 
+function pathsAreComparable(leftPath: string | undefined, rightPath: string | undefined): boolean {
+  if (!leftPath || !rightPath) {
+    return false;
+  }
+
+  const leftBase = basename(leftPath);
+  const rightBase = basename(rightPath);
+
+  return (
+    leftPath === rightPath ||
+    leftPath.endsWith(rightPath) ||
+    rightPath.endsWith(leftPath) ||
+    (leftBase !== undefined && rightBase !== undefined && leftBase === rightBase)
+  );
+}
+
 function basename(input: string | undefined): string | undefined {
   if (!input) {
     return undefined;
@@ -387,47 +443,79 @@ function basename(input: string | undefined): string | undefined {
   return parts.length > 0 ? parts[parts.length - 1] : normalized;
 }
 
-function locationsAreNear(
-  staticLocation: string | undefined,
-  dynamicLocation: string | undefined,
+function parseLocationObject(
+  value: unknown,
+): { path?: string; line?: number; column?: number } {
+  const record = asRecord(value);
+
+  if (!record) {
+    return {};
+  }
+
+  const hintLocation = parseLocation(asString(record.hint));
+  const path = asString(record.path) ?? hintLocation.path;
+  const line = asNumber(record.line) ?? hintLocation.line;
+  const column = asNumber(record.column) ?? hintLocation.column;
+
+  return {
+    ...(path !== undefined ? { path } : {}),
+    ...(line !== undefined ? { line } : {}),
+    ...(column !== undefined ? { column } : {}),
+  };
+}
+
+function extractFindingLocation(
+  finding: ReportFinding,
+): { path?: string; line?: number; column?: number } {
+  const objectLocation = parseLocationObject(finding.location);
+  const hintLocation = parseLocation(asString(finding.locationHint));
+  const legacyPath =
+    asString(finding['file']) ??
+    asString(finding['filePath']) ??
+    asString(finding['path']);
+  const legacyLine = asNumber(finding['line']);
+  const legacyColumn = asNumber(finding['column']);
+
+  const path = objectLocation.path ?? legacyPath ?? hintLocation.path;
+  const line = objectLocation.line ?? legacyLine ?? hintLocation.line;
+  const column = objectLocation.column ?? legacyColumn ?? hintLocation.column;
+
+  return {
+    ...(path !== undefined ? { path } : {}),
+    ...(line !== undefined ? { line } : {}),
+    ...(column !== undefined ? { column } : {}),
+  };
+}
+
+function getLocationDistance(
+  staticFinding: ReportFinding,
+  dynamicFinding: ReportFinding,
+): number | undefined {
+  const left = extractFindingLocation(staticFinding);
+  const right = extractFindingLocation(dynamicFinding);
+
+  if (left.line === undefined || right.line === undefined) {
+    return undefined;
+  }
+
+  const leftPath = normalizeLocationToken(left.path);
+  const rightPath = normalizeLocationToken(right.path);
+
+  if (!pathsAreComparable(leftPath, rightPath)) {
+    return undefined;
+  }
+
+  return Math.abs(left.line - right.line);
+}
+
+function isWithinLocationThreshold(
+  locationDistance: number | undefined,
+  locationDistanceThreshold: number,
 ): boolean {
-  if (!staticLocation || !dynamicLocation) {
-    return false;
-  }
-
-  if (staticLocation === dynamicLocation) {
-    return true;
-  }
-
-  const left = parseLocation(staticLocation);
-  const right = parseLocation(dynamicLocation);
-
-  const leftBase = basename(left.path);
-  const rightBase = basename(right.path);
-
-  const samePath =
-    (left.path !== undefined && right.path !== undefined && left.path === right.path) ||
-    (left.path !== undefined &&
-      right.path !== undefined &&
-      left.path.endsWith(right.path)) ||
-    (left.path !== undefined &&
-      right.path !== undefined &&
-      right.path.endsWith(left.path)) ||
-    (leftBase !== undefined && rightBase !== undefined && leftBase === rightBase);
-
-  if (samePath && left.line !== undefined && right.line !== undefined) {
-    return Math.abs(left.line - right.line) <= 5;
-  }
-
-  if (samePath && left.line === undefined && right.line === undefined) {
-    return true;
-  }
-
-  if (left.line !== undefined && right.line !== undefined) {
-    return Math.abs(left.line - right.line) <= 2;
-  }
-
-  return false;
+  return (
+    locationDistance !== undefined &&
+    locationDistance <= locationDistanceThreshold
+  );
 }
 
 function normalizeFinding(
@@ -505,21 +593,30 @@ function thresholdForFamily(family: CorrelationScopeFamily): number {
   }
 }
 
-function scorePair(staticFinding: NormalizedFinding, dynamicFinding: NormalizedFinding): number {
+function scorePair(
+  staticFinding: NormalizedFinding,
+  dynamicFinding: NormalizedFinding,
+  locationDistanceThreshold: number,
+): { score: number; locationDistance?: number } {
   if (!isScopedFamily(staticFinding.family) || !isScopedFamily(dynamicFinding.family)) {
-    return 0;
+    return { score: 0 };
   }
 
   if (staticFinding.family !== dynamicFinding.family) {
-    return 0;
+    return { score: 0 };
   }
+
+  const locationDistance = getLocationDistance(
+    staticFinding.finding,
+    dynamicFinding.finding,
+  );
 
   if (
     staticFinding.correlationFingerprint &&
     dynamicFinding.correlationFingerprint &&
     staticFinding.correlationFingerprint === dynamicFinding.correlationFingerprint
   ) {
-    return 100;
+    return { score: 100, ...(locationDistance !== undefined ? { locationDistance } : {}) };
   }
 
   switch (staticFinding.family) {
@@ -529,10 +626,10 @@ function scorePair(staticFinding: NormalizedFinding, dynamicFinding: NormalizedF
         dynamicFinding.resourceToken &&
         staticFinding.resourceToken === dynamicFinding.resourceToken
       ) {
-        return 100;
+        return { score: 100, ...(locationDistance !== undefined ? { locationDistance } : {}) };
       }
 
-      return 0;
+      return { score: 0, ...(locationDistance !== undefined ? { locationDistance } : {}) };
     }
 
     case 'dom': {
@@ -570,11 +667,11 @@ function scorePair(staticFinding: NormalizedFinding, dynamicFinding: NormalizedF
         score += 5;
       }
 
-      if (locationsAreNear(staticFinding.locationToken, dynamicFinding.locationToken)) {
+      if (isWithinLocationThreshold(locationDistance, locationDistanceThreshold)) {
         score += 10;
       }
 
-      return score;
+      return { score, ...(locationDistance !== undefined ? { locationDistance } : {}) };
     }
 
     case 'storage': {
@@ -612,15 +709,15 @@ function scorePair(staticFinding: NormalizedFinding, dynamicFinding: NormalizedF
         score += 5;
       }
 
-      if (locationsAreNear(staticFinding.locationToken, dynamicFinding.locationToken)) {
+      if (isWithinLocationThreshold(locationDistance, locationDistanceThreshold)) {
         score += 10;
       }
 
-      return score;
+      return { score, ...(locationDistance !== undefined ? { locationDistance } : {}) };
     }
 
     default:
-      return 0;
+      return { score: 0, ...(locationDistance !== undefined ? { locationDistance } : {}) };
   }
 }
 
@@ -658,10 +755,32 @@ function toUnmatchedFinding(finding: NormalizedFinding): UnmatchedFinding {
   };
 }
 
+function buildMatchReasoning(
+  family: CorrelationScopeFamily,
+  matchedSignals: string[],
+  locationDistance: number | undefined,
+  locationDistanceThreshold: number,
+): string {
+  const signalText =
+    matchedSignals.length > 0 ? matchedSignals.join(', ') : 'compatible-normalized-signals';
+
+  if (locationDistance === undefined) {
+    return `Matched on family "${family}"; signals: ${signalText}.`;
+  }
+
+  if (locationDistance <= locationDistanceThreshold) {
+    return `Matched on family "${family}"; signals: ${signalText}; line distance ${locationDistance} (threshold ${locationDistanceThreshold}).`;
+  }
+
+  return `Matched on family "${family}"; signals: ${signalText}; line distance ${locationDistance} exceeds threshold ${locationDistanceThreshold}.`;
+}
+
 function toCorroboratedFinding(
   staticFinding: NormalizedFinding & { family: CorrelationScopeFamily },
   dynamicFinding: NormalizedFinding & { family: CorrelationScopeFamily },
   score: number,
+  locationDistanceThreshold: number,
+  locationDistance: number | undefined,
 ): CorroboratedFinding {
   const matchSignals: CorroboratedFinding['matchSignals'] = {};
 
@@ -716,144 +835,286 @@ function toCorroboratedFinding(
     matchSignals.resourceToken = staticFinding.resourceToken;
   }
 
+  const matchedSignals = [
+    ...(matchSignals.correlationFingerprint !== undefined ? ['correlation-fingerprint'] : []),
+    ...(matchSignals.sinkToken !== undefined ? ['sink-token'] : []),
+    ...(matchSignals.storageKeyToken !== undefined ? ['storage-key-token'] : []),
+    ...(matchSignals.storageKind !== undefined ? ['storage-kind'] : []),
+    ...(matchSignals.resourceToken !== undefined ? ['resource-token'] : []),
+    ...(isWithinLocationThreshold(locationDistance, locationDistanceThreshold)
+      ? ['location-proximity']
+      : []),
+  ];
+
   return {
     family: staticFinding.family,
     score,
     matchKind,
     matchSignals,
+    matchSummary: {
+      matchedFamily: staticFinding.family,
+      matchedSignals,
+      score,
+      matchKind,
+      ...(locationDistance !== undefined ? { locationDistance } : {}),
+      locationThresholdUsed: locationDistanceThreshold,
+      reasoning: buildMatchReasoning(
+        staticFinding.family,
+        matchedSignals,
+        locationDistance,
+        locationDistanceThreshold,
+      ),
+    },
     staticFinding: staticFinding.finding,
     dynamicFinding: dynamicFinding.finding,
   };
 }
 
+function summarizeInputReport(
+  report: FindingReport,
+  scopedCount: number,
+  ignoredCount: number,
+): CorrelationInputSummary {
+  return {
+    ...(typeof report.reportType === 'string' ? { reportType: report.reportType } : {}),
+    ...(typeof report.schemaVersion === 'string'
+      ? { schemaVersion: report.schemaVersion }
+      : {}),
+    findingCount: report.findings.length,
+    scopedCount,
+    ignoredCount,
+  };
+}
+
+function buildCorrelationSummary(
+  corroborated: readonly CorroboratedFinding[],
+  staticOnly: readonly UnmatchedFinding[],
+  dynamicOnly: readonly UnmatchedFinding[],
+  ignoredStatic: readonly UnmatchedFinding[],
+  ignoredDynamic: readonly UnmatchedFinding[],
+): CorrelationReportSummary {
+  const corroboratedByFamily: Partial<Record<CorrelationScopeFamily, number>> = {};
+
+  for (const finding of corroborated) {
+    corroboratedByFamily[finding.family] =
+      (corroboratedByFamily[finding.family] ?? 0) + 1;
+  }
+
+  return {
+    corroboratedCount: corroborated.length,
+    corroboratedByFamily,
+    staticOnlyCount: staticOnly.length,
+    dynamicOnlyCount: dynamicOnly.length,
+    ignoredStaticCount: ignoredStatic.length,
+    ignoredDynamicCount: ignoredDynamic.length,
+  };
+}
+
+function extractReportTarget(report: FindingReport): string | undefined {
+  const metadata = asRecord(report.metadata);
+
+  return (
+    asString(metadata?.target) ??
+    asString(metadata?.targetPath) ??
+    asString(metadata?.targetUrl)
+  );
+}
+
+function buildCorrelationTarget(
+  staticReport: FindingReport,
+  dynamicReport: FindingReport,
+): string | undefined {
+  const staticTarget = extractReportTarget(staticReport);
+  const dynamicTarget = extractReportTarget(dynamicReport);
+
+  if (staticTarget && dynamicTarget) {
+    return `${staticTarget} <> ${dynamicTarget}`;
+  }
+
+  return staticTarget ?? dynamicTarget;
+}
+
 export function correlateReports(
   staticReport: FindingReport,
   dynamicReport: FindingReport,
-  options: CorrelateOptions = {},
+  options: CorrelatorOptions = {},
 ): CorrelatedReport {
-  const normalizedStatic: NormalizedFinding[] = staticReport.findings.map(
-  (finding: ReportFinding, index: number): NormalizedFinding =>
-    normalizeFinding(finding, index, 'static'),
-);
+  const locationDistanceThreshold =
+    options.locationDistanceThreshold ?? DEFAULT_LOCATION_DISTANCE_THRESHOLD;
 
-const normalizedDynamic: NormalizedFinding[] = dynamicReport.findings.map(
-  (finding: ReportFinding, index: number): NormalizedFinding =>
-    normalizeFinding(finding, index, 'dynamic'),
-);
+  const normalizedStatic: NormalizedFinding[] = staticReport.findings.map(
+    (finding: ReportFinding, index: number): NormalizedFinding =>
+      normalizeFinding(finding, index, 'static'),
+  );
+
+  const normalizedDynamic: NormalizedFinding[] = dynamicReport.findings.map(
+    (finding: ReportFinding, index: number): NormalizedFinding =>
+      normalizeFinding(finding, index, 'dynamic'),
+  );
 
   const scopedStatic = normalizedStatic.filter(
-  (
-    finding: NormalizedFinding,
-  ): finding is NormalizedFinding & { family: CorrelationScopeFamily } =>
-    isScopedFamily(finding.family),
-);
+    (
+      finding: NormalizedFinding,
+    ): finding is NormalizedFinding & { family: CorrelationScopeFamily } =>
+      isScopedFamily(finding.family),
+  );
 
-const scopedDynamic = normalizedDynamic.filter(
-  (
-    finding: NormalizedFinding,
-  ): finding is NormalizedFinding & { family: CorrelationScopeFamily } =>
-    isScopedFamily(finding.family),
-);
+  const scopedDynamic = normalizedDynamic.filter(
+    (
+      finding: NormalizedFinding,
+    ): finding is NormalizedFinding & { family: CorrelationScopeFamily } =>
+      isScopedFamily(finding.family),
+  );
 
-const ignoredStatic: NormalizedFinding[] = normalizedStatic.filter(
-  (finding: NormalizedFinding): boolean => !isScopedFamily(finding.family),
-);
+  const ignoredStatic: NormalizedFinding[] = normalizedStatic.filter(
+    (finding: NormalizedFinding): boolean => !isScopedFamily(finding.family),
+  );
 
-const ignoredDynamic: NormalizedFinding[] = normalizedDynamic.filter(
-  (finding: NormalizedFinding): boolean => !isScopedFamily(finding.family),
-);
+  const ignoredDynamic: NormalizedFinding[] = normalizedDynamic.filter(
+    (finding: NormalizedFinding): boolean => !isScopedFamily(finding.family),
+  );
 
   const candidatePairs: CandidatePair[] = [];
 
-for (let staticIndex = 0; staticIndex < scopedStatic.length; staticIndex += 1) {
-  const left = scopedStatic[staticIndex];
-  if (!left) {
-    continue;
-  }
-
-  for (let dynamicIndex = 0; dynamicIndex < scopedDynamic.length; dynamicIndex += 1) {
-    const right = scopedDynamic[dynamicIndex];
-    if (!right) {
+  for (let staticIndex = 0; staticIndex < scopedStatic.length; staticIndex += 1) {
+    const left = scopedStatic[staticIndex];
+    if (!left) {
       continue;
     }
 
-    const score = scorePair(left, right);
+    for (let dynamicIndex = 0; dynamicIndex < scopedDynamic.length; dynamicIndex += 1) {
+      const right = scopedDynamic[dynamicIndex];
+      if (!right) {
+        continue;
+      }
 
-    if (score >= thresholdForFamily(left.family)) {
-      candidatePairs.push({ staticIndex, dynamicIndex, score });
+      const pairScore = scorePair(left, right, locationDistanceThreshold);
+
+      if (pairScore.score >= thresholdForFamily(left.family)) {
+        candidatePairs.push({
+          staticIndex,
+          dynamicIndex,
+          score: pairScore.score,
+          ...(pairScore.locationDistance !== undefined
+            ? { locationDistance: pairScore.locationDistance }
+            : {}),
+        });
+      }
     }
   }
-}
 
-  candidatePairs.sort((a, b) => b.score - a.score);
+  candidatePairs.sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+
+    if (
+      left.locationDistance !== undefined &&
+      right.locationDistance !== undefined &&
+      left.locationDistance !== right.locationDistance
+    ) {
+      return left.locationDistance - right.locationDistance;
+    }
+
+    if (left.locationDistance !== undefined && right.locationDistance === undefined) {
+      return -1;
+    }
+
+    if (left.locationDistance === undefined && right.locationDistance !== undefined) {
+      return 1;
+    }
+
+    return 0;
+  });
 
   const usedStatic = new Set<number>();
   const usedDynamic = new Set<number>();
   const corroborated: CorroboratedFinding[] = [];
 
- for (const pair of candidatePairs) {
-  if (usedStatic.has(pair.staticIndex) || usedDynamic.has(pair.dynamicIndex)) {
-    continue;
+  for (const pair of candidatePairs) {
+    if (usedStatic.has(pair.staticIndex) || usedDynamic.has(pair.dynamicIndex)) {
+      continue;
+    }
+
+    const left = scopedStatic[pair.staticIndex];
+    const right = scopedDynamic[pair.dynamicIndex];
+
+    if (!left || !right) {
+      continue;
+    }
+
+    usedStatic.add(pair.staticIndex);
+    usedDynamic.add(pair.dynamicIndex);
+
+    corroborated.push(
+      toCorroboratedFinding(
+        left,
+        right,
+        pair.score,
+        locationDistanceThreshold,
+        pair.locationDistance,
+      ),
+    );
   }
 
-  const left = scopedStatic[pair.staticIndex];
-  const right = scopedDynamic[pair.dynamicIndex];
-
-  if (!left || !right) {
-    continue;
-  }
-
-  usedStatic.add(pair.staticIndex);
-  usedDynamic.add(pair.dynamicIndex);
-
-  corroborated.push(toCorroboratedFinding(left, right, pair.score));
-}
-
-    const staticOnly = scopedStatic
+  const staticOnly = scopedStatic
     .filter(
-        (_finding: NormalizedFinding & { family: CorrelationScopeFamily }, index: number): boolean =>
+      (_finding: NormalizedFinding & { family: CorrelationScopeFamily }, index: number): boolean =>
         !usedStatic.has(index),
     )
     .map(toUnmatchedFinding);
 
-    const dynamicOnly = scopedDynamic
+  const dynamicOnly = scopedDynamic
     .filter(
-        (_finding: NormalizedFinding & { family: CorrelationScopeFamily }, index: number): boolean =>
+      (_finding: NormalizedFinding & { family: CorrelationScopeFamily }, index: number): boolean =>
         !usedDynamic.has(index),
     )
     .map(toUnmatchedFinding);
+
+  const ignoredStaticFindings = ignoredStatic.map(toUnmatchedFinding);
+  const ignoredDynamicFindings = ignoredDynamic.map(toUnmatchedFinding);
 
   const inputs: CorrelatedReport['metadata']['inputs'] = {};
   if (options.staticReportPath !== undefined) inputs.staticReportPath = options.staticReportPath;
   if (options.dynamicReportPath !== undefined) inputs.dynamicReportPath = options.dynamicReportPath;
 
-  return {
-    metadata: {
-      correlationVersion: 1,
-      generatedAt: new Date().toISOString(),
-      ...(Object.keys(inputs).length > 0 ? { inputs } : {}),
-      staticReportSummary: {
-        findingCount: staticReport.findings.length,
-        scopedCount: scopedStatic.length,
-        ignoredCount: ignoredStatic.length,
-      },
-      dynamicReportSummary: {
-        findingCount: dynamicReport.findings.length,
-        scopedCount: scopedDynamic.length,
-        ignoredCount: ignoredDynamic.length,
-      },
-      summary: {
-        corroboratedCount: corroborated.length,
-        staticOnlyCount: staticOnly.length,
-        dynamicOnlyCount: dynamicOnly.length,
-        ignoredStaticCount: ignoredStatic.length,
-        ignoredDynamicCount: ignoredDynamic.length,
-      },
-    },
+  const summary = buildCorrelationSummary(
     corroborated,
     staticOnly,
     dynamicOnly,
-    ignoredStatic: ignoredStatic.map(toUnmatchedFinding),
-    ignoredDynamic: ignoredDynamic.map(toUnmatchedFinding),
+    ignoredStaticFindings,
+    ignoredDynamicFindings,
+  );
+
+  return {
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    reportType: 'correlation',
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      toolName: REPORT_TOOL_NAME,
+      ...(buildCorrelationTarget(staticReport, dynamicReport) !== undefined
+        ? { target: buildCorrelationTarget(staticReport, dynamicReport) }
+        : {}),
+      ...(Object.keys(inputs).length > 0 ? { inputs } : {}),
+      heuristics: {
+        locationDistanceThreshold,
+      },
+      staticReport: summarizeInputReport(
+        staticReport,
+        scopedStatic.length,
+        ignoredStatic.length,
+      ),
+      dynamicReport: summarizeInputReport(
+        dynamicReport,
+        scopedDynamic.length,
+        ignoredDynamic.length,
+      ),
+    },
+    summary,
+    corroborated,
+    staticOnly,
+    dynamicOnly,
+    ignoredStatic: ignoredStaticFindings,
+    ignoredDynamic: ignoredDynamicFindings,
   };
 }
